@@ -1,0 +1,194 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* 系统偏好主题检测（作为默认值） */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 简化的滑块样式 - 强制优先级 */
+input[type="range"].slider {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  width: 100% !important;
+  height: 8px !important;
+  border-radius: 4px !important;
+  outline: none !important;
+}
+
+input[type="range"].slider::-webkit-slider-track {
+  background: #E5E7EB !important;
+  height: 8px !important;
+  border-radius: 4px !important;
+  border: none !important;
+}
+
+input[type="range"].slider::-moz-range-track {
+  background: #E5E7EB !important;
+  height: 8px !important;
+  border-radius: 4px !important;
+  border: none !important;
+}
+
+input[type="range"].slider::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background: #3B82F6 !important;
+  height: 20px !important;
+  width: 20px !important;
+  border-radius: 50% !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  cursor: pointer !important;
+  margin-top: -6px !important;
+  z-index: 10 !important;
+}
+
+input[type="range"].slider::-moz-range-thumb {
+  background: #3B82F6 !important;
+  height: 20px !important;
+  width: 20px !important;
+  border-radius: 50% !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  cursor: pointer !important;
+  border: none !important;
+  z-index: 10 !important;
+}
+
+input[type="range"].slider:hover::-webkit-slider-thumb {
+  background: #2563EB !important;
+  transform: scale(1.1) !important;
+}
+
+input[type="range"].slider:hover::-moz-range-thumb {
+  background: #2563EB !important;
+  transform: scale(1.1) !important;
+}
+
+input[type="range"].slider:active::-webkit-slider-thumb {
+  background: #1D4ED8 !important;
+  transform: scale(0.95) !important;
+}
+
+input[type="range"].slider:active::-moz-range-thumb {
+  background: #1D4ED8 !important;
+  transform: scale(0.95) !important;
+}
+
+/* iOS Safari 特定优化 */
+@supports (-webkit-touch-callout: none) {
+  /* 防止 iOS Safari 缩放 */
+  input[type="text"],
+  input[type="textarea"],
+  textarea {
+    font-size: 16px !important;
+    transform-origin: left top;
+    transform: scale(1);
+  }
+  
+  /* 改进触控体验 */
+  button,
+  a,
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  /* 滚动优化 */
+  body {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+  }
+  
+  /* 防止橡皮筋效果 */
+  .container {
+    overscroll-behavior-y: contain;
+  }
+}
+
+/* 移动端特定优化 */
+@media (max-width: 640px) {
+  /* 增大触控目标 */
+  button, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* 改进文本可读性 */
+  body {
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+  }
+  
+  /* 输入框优化 */
+  input, textarea, select {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  
+  /* 防止水平滚动 */
+  body {
+    overflow-x: hidden;
+  }
+}
+
+/* iPad 特定优化 */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .container {
+    max-width: 100%;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+/* 触控设备优化 */
+@media (hover: none) and (pointer: coarse) {
+  /* 移除悬停效果，改为触控反馈 */
+  button:hover {
+    transform: none;
+  }
+  
+  button:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+  }
+  
+  /* 焦点样式优化 */
+  button:focus,
+  input:focus,
+  textarea:focus {
+    outline: 2px solid #333;
+    outline-offset: 2px;
+  }
+}
