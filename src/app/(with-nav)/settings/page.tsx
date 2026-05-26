@@ -28,8 +28,8 @@ export default function SettingsPage() {
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600 dark:text-gray-400">
           {language === 'zh'
-            ? '这里替代原来的 Coze / API / 数据库配置页。V1 统一展示 mock 数据运行参数，并允许切换主题、语言、延迟与失败率。'
-            : 'This replaces the old Coze/API/database status page. V1 exposes the frontend mock runtime controls for language, theme, delay, and failure rate.'}
+            ? '这里替代原来的 Coze / API / 数据库配置页。当前模式下，主题与语言始终可配；延迟与失败率用于控制 mock 生成体验；session/settings 会按运行模式落本地或远端。'
+            : 'This replaces the old Coze/API/database status page. Theme and language are always configurable; delay and failure rate control mock generation behavior; session/settings persist locally or remotely based on runtime mode.'}
         </p>
       </section>
 
@@ -141,8 +141,8 @@ export default function SettingsPage() {
               </div>
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                 {language === 'zh'
-                  ? '删除 auto / manual 的浏览器会话存档，不影响 mock 配置。'
-                  : 'Deletes browser-stored auto and manual sessions without touching runtime settings.'}
+                  ? `删除 auto / manual 会话存档，不影响当前 ${settings.dataMode} 模式下的其他运行配置。`
+                  : `Deletes auto/manual sessions without changing the rest of the current ${settings.dataMode} runtime configuration.`}
               </p>
               <button
                 type="button"
@@ -151,6 +151,22 @@ export default function SettingsPage() {
               >
                 {language === 'zh' ? '清空本地会话' : 'Clear Sessions'}
               </button>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => void sessionService.resetToFixtureSession('auto')}
+                  className="rounded-2xl border border-gray-200 px-4 py-2 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-200"
+                >
+                  {language === 'zh' ? '重置自动分镜样例' : 'Reset Auto Fixture'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void sessionService.resetToFixtureSession('manual')}
+                  className="rounded-2xl border border-gray-200 px-4 py-2 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-200"
+                >
+                  {language === 'zh' ? '重置手工分镜样例' : 'Reset Manual Fixture'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

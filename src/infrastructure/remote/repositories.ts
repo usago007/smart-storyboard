@@ -1,5 +1,6 @@
 import type { AppSettings, SessionType, StoryboardSession } from '@/domain/storyboard';
 import type { ISessionRepository, ISettingsRepository } from '@/infrastructure/repository-interfaces';
+import { getRuntimeDataMode } from '@/shared/runtime-config';
 import { getDb } from './db';
 import { sessions, settings } from './schema';
 import { eq, and } from 'drizzle-orm';
@@ -27,9 +28,9 @@ export class SqliteSettingsRepository implements ISettingsRepository {
       .where(eq(settings.token, token));
 
     return {
-      dataMode: 'remote',
-      mockDelayMs: 600,
-      mockFailureRate: 0,
+      dataMode: getRuntimeDataMode(),
+      mockDelayMs: row?.mockDelayMs ?? 600,
+      mockFailureRate: row?.mockFailureRate ?? 0,
       language: (row?.language as AppSettings['language']) || 'zh',
       theme: (row?.theme as AppSettings['theme']) || 'light',
     };
@@ -41,12 +42,18 @@ export class SqliteSettingsRepository implements ISettingsRepository {
     const current = await this.getSettings();
     const next = { ...current, ...patch };
 
-    const dbPatch: Record<string, string> = {};
+    const dbPatch: Record<string, string | number> = {};
     if (patch.language !== undefined) {
       dbPatch.language = next.language;
     }
     if (patch.theme !== undefined) {
       dbPatch.theme = next.theme;
+    }
+    if (patch.mockDelayMs !== undefined) {
+      dbPatch.mockDelayMs = next.mockDelayMs;
+    }
+    if (patch.mockFailureRate !== undefined) {
+      dbPatch.mockFailureRate = next.mockFailureRate;
     }
 
     if (Object.keys(dbPatch).length === 0) {
@@ -55,7 +62,13 @@ export class SqliteSettingsRepository implements ISettingsRepository {
 
     await db
       .insert(settings)
-      .values({ token, ...next, language: next.language, theme: next.theme })
+      .values({
+        token,
+        language: next.language,
+        theme: next.theme,
+        mockDelayMs: next.mockDelayMs,
+        mockFailureRate: next.mockFailureRate,
+      })
       .onConflictDoUpdate({
         target: settings.token,
         set: dbPatch,

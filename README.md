@@ -63,6 +63,7 @@ Requires running dev server (BFF routes serve SQLite-backed persistence).
 - Session and settings are persisted to SQLite via API routes.
 - AI generation (prompts, frames, images) remains mock.
 - See `src/infrastructure/remote/` for implementation.
+- GitHub Pages export does not support remote mode; it is a mock-only deployment target.
 
 ## Architecture
 

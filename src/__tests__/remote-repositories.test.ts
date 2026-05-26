@@ -1,12 +1,24 @@
 // @vitest-environment node
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import { unlinkSync } from 'node:fs';
 
+const TEST_DB_PATH = './data/test-remote-repositories.db';
+
+function cleanupDbFiles() {
+  try { unlinkSync(TEST_DB_PATH); } catch { /* no existing db */ }
+  try { unlinkSync(`${TEST_DB_PATH}-wal`); } catch { /* no existing db */ }
+  try { unlinkSync(`${TEST_DB_PATH}-shm`); } catch { /* no existing db */ }
+}
+
 beforeAll(() => {
-  try { unlinkSync('./data/storyboard.db'); } catch { /* no existing db */ }
-  try { unlinkSync('./data/storyboard.db-wal'); } catch { /* no existing db */ }
-  try { unlinkSync('./data/storyboard.db-shm'); } catch { /* no existing db */ }
+  process.env.NEXT_PUBLIC_DATA_MODE = 'remote';
+  process.env.SQLITE_DB_PATH = TEST_DB_PATH;
+  cleanupDbFiles();
+});
+
+beforeEach(() => {
+  vi.resetModules();
 });
 
 describe('SqliteSettingsRepository', () => {

@@ -24,7 +24,7 @@ function formatFrame(scene: Scene, frameType: 'first' | 'last') {
 
 export default function ResultPage() {
   const router = useRouter();
-  const { language } = useApp();
+  const { language, settings } = useApp();
   const { storyboardService, sessionService, assetService } = getClientServices();
   const [session, setSession] = useState<StoryboardSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -228,7 +228,11 @@ export default function ResultPage() {
         <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
           <span>{language === 'zh' ? `时长 ${session?.duration}s` : `Duration ${session?.duration}s`}</span>
           <span>{language === 'zh' ? `分镜数量 ${scenes.length}` : `Scenes ${scenes.length}`}</span>
-          <span>{saving ? (language === 'zh' ? '正在自动保存...' : 'Autosaving...') : (language === 'zh' ? '本地 mock 会话已接管保存' : 'Saved to local mock session')}</span>
+          <span>{saving
+            ? (language === 'zh' ? '正在自动保存...' : 'Autosaving...')
+            : (language === 'zh'
+              ? `${settings?.dataMode === 'remote' ? '远端' : '本地'}会话已接管保存`
+              : `Saved to ${settings?.dataMode === 'remote' ? 'remote' : 'local'} session storage`)}</span>
           {batchState.type && (
             <span>
               {language === 'zh'

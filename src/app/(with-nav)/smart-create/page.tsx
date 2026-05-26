@@ -36,7 +36,7 @@ const templates = {
 
 export default function SmartCreatePage() {
   const router = useRouter();
-  const { language, t } = useApp();
+  const { language, t, settings } = useApp();
   const { storyboardService, sessionService } = getClientServices();
   const [inputMethod, setInputMethod] = useState<InputMethod>('text');
   const [script, setScript] = useState('');
@@ -139,8 +139,8 @@ export default function SmartCreatePage() {
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600 dark:text-gray-400">
           {language === 'zh'
-            ? 'V1 已切换到纯前端 mock 数据模式。你可以直接演示输入、拆分、生成提示词、生成图片和结果保存，不依赖 Coze 或数据库。'
-            : 'V1 now runs entirely on frontend mock data. You can demo input, splitting, prompt generation, image generation, and state persistence without backend services.'}
+            ? `当前运行模式为 ${settings?.dataMode || 'mock'}。你可以演示输入、拆分、生成提示词、生成图片和结果保存；文本/图片生成仍为 mock，会话与配置可按模式切到真实持久化。`
+            : `Current mode is ${settings?.dataMode || 'mock'}. You can demo input, splitting, prompt generation, image generation, and persistence; text/image generation stays mock while session/settings can switch to real persistence.`}
         </p>
       </section>
 
@@ -286,7 +286,7 @@ export default function SmartCreatePage() {
           <dl className="mt-4 space-y-4 text-sm">
             <div className="flex items-center justify-between">
               <dt className="text-gray-500 dark:text-gray-400">{language === 'zh' ? '数据模式' : 'Data Mode'}</dt>
-              <dd className="rounded-full bg-gray-100 px-3 py-1 text-gray-800 dark:bg-gray-900 dark:text-gray-200">mock</dd>
+              <dd className="rounded-full bg-gray-100 px-3 py-1 text-gray-800 dark:bg-gray-900 dark:text-gray-200">{settings?.dataMode || 'mock'}</dd>
             </div>
             <div className="flex items-center justify-between">
               <dt className="text-gray-500 dark:text-gray-400">{language === 'zh' ? '当前字数' : 'Characters'}</dt>

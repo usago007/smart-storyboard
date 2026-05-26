@@ -17,7 +17,7 @@ import {
   RemoteSessionRepository,
   RemoteSettingsRepository,
 } from '@/infrastructure/remote/client-repositories';
-import { DEFAULT_APP_SETTINGS } from '@/shared/runtime-config';
+import { DEFAULT_APP_SETTINGS, getRuntimeDataMode } from '@/shared/runtime-config';
 
 export interface StoryboardService {
   splitScenes(input: { script: string; duration: number; wordCount?: number }): Promise<StoryboardDraft>;
@@ -70,7 +70,7 @@ function withSessionMeta(
 }
 
 export function createClientServices() {
-  const dataMode = DEFAULT_APP_SETTINGS.dataMode;
+  const dataMode = getRuntimeDataMode();
   const isRemote = dataMode === 'remote';
 
   const mockSettingsRepository = new MockSettingsRepository();

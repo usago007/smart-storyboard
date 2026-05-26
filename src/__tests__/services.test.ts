@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createClientServices } from '@/application/services';
 import { getLocalStorage, getSessionStorage } from '@/shared/browser-storage';
 import { STORAGE_KEYS } from '@/shared/runtime-config';
@@ -186,5 +186,55 @@ describe('SettingsService', () => {
 
     const reloaded = await settingsService.getSettings();
     expect(reloaded.mockFailureRate).toBe(25);
+  });
+});
+
+describe('Service mode selection', () => {
+  beforeEach(() => {
+    resetBrowserStorage();
+    delete process.env.NEXT_PUBLIC_DATA_MODE;
+  });
+
+  it('uses mock repositories by default', async () => {
+    const { sessionService } = createClientServices();
+    const session = await sessionService.loadAutoSession();
+    expect(session).toBeNull();
+  });
+
+  it('uses remote repositories for session/settings when remote mode is enabled', async () => {
+    process.env.NEXT_PUBLIC_DATA_MODE = 'remote';
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: null }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        success: true,
+        data: {
+          dataMode: 'remote',
+          mockDelayMs: 600,
+          mockFailureRate: 0,
+          language: 'zh',
+          theme: 'light',
+        },
+      }), { status: 200 }));
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { createClientServices: createRemoteClientServices } = await import('@/application/services');
+    const services = createRemoteClientServices();
+    await services.sessionService.loadAutoSession();
+    await services.settingsService.getSettings();
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      '/api/session?type=auto',
+      expect.objectContaining({ headers: expect.objectContaining({ 'Content-Type': 'application/json' }) }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/settings',
+      expect.objectContaining({ headers: expect.objectContaining({ 'Content-Type': 'application/json' }) }),
+    );
+
+    vi.unstubAllGlobals();
+    delete process.env.NEXT_PUBLIC_DATA_MODE;
   });
 });

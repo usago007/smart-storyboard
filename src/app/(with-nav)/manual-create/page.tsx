@@ -18,7 +18,7 @@ function createScene(id: number, duration = 5): Scene {
 
 export default function ManualCreatePage() {
   const router = useRouter();
-  const { language } = useApp();
+  const { language, settings } = useApp();
   const { storyboardService, sessionService, assetService } = getClientServices();
   const [session, setSession] = useState<StoryboardSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -170,8 +170,8 @@ export default function ManualCreatePage() {
             </h1>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
               {language === 'zh'
-                ? '这一页完全由 mock session 驱动。你可以增删改查分镜内容，并生成提示词、首尾帧和占位图。'
-                : 'This page is fully powered by the mock session. Create, edit, remove, and enrich scenes with prompts, frames, and placeholder images.'}
+                ? `这一页当前由 ${settings?.dataMode || 'mock'} 模式托管会话。你可以增删改查分镜内容，并生成提示词、首尾帧和占位图。`
+                : `This page currently stores sessions in ${settings?.dataMode || 'mock'} mode. Create, edit, remove, and enrich scenes with prompts, frames, and placeholder images.`}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -192,7 +192,11 @@ export default function ManualCreatePage() {
           </div>
         </div>
         <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-          {saving ? (language === 'zh' ? '正在自动保存...' : 'Autosaving...') : (language === 'zh' ? '本地会话已接管自动保存' : 'Autosave is handled by local mock session')}
+          {saving
+            ? (language === 'zh' ? '正在自动保存...' : 'Autosaving...')
+            : (language === 'zh'
+              ? `${settings?.dataMode === 'remote' ? '远端' : '本地'}会话已接管自动保存`
+              : `Autosave is handled by ${settings?.dataMode === 'remote' ? 'remote' : 'local'} session persistence`)}
         </div>
       </section>
 

@@ -56,6 +56,11 @@ Pages → getClientServices() → Service interfaces → Mock Repositories → F
 
 Set `NEXT_PUBLIC_DATA_MODE=mock` (default in `.env.example`). No PostgreSQL, Coze API key, or S3 needed.
 
+## Runtime boundary
+
+- Local `next dev` / server-mode builds can use `NEXT_PUBLIC_DATA_MODE=remote` with SQLite-backed BFF routes.
+- GitHub Pages export is mock-only because static export cannot host Next.js API routes or SQLite persistence.
+
 ## Legacy zone
 
 These directories contain old Coze/DB/S3 code. They are **not imported by any current page** and are excluded from ESLint:

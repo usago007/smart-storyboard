@@ -18,4 +18,6 @@ export const settings = sqliteTable('settings', {
   token: text('token').primaryKey(),
   language: text('language').$type<Language>().notNull().default('zh'),
   theme: text('theme').$type<Theme>().notNull().default('light'),
+  mockDelayMs: integer('mock_delay_ms').notNull().default(600),
+  mockFailureRate: integer('mock_failure_rate').notNull().default(0),
 });

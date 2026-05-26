@@ -13,6 +13,19 @@ function ensureDir() {
   }
 }
 
+function ensureSettingsColumns(sqlite: Database.Database) {
+  const columns = sqlite.prepare("PRAGMA table_info(settings)").all() as Array<{ name: string }>;
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (!columnNames.has('mock_delay_ms')) {
+    sqlite.exec("ALTER TABLE settings ADD COLUMN mock_delay_ms INTEGER NOT NULL DEFAULT 600");
+  }
+
+  if (!columnNames.has('mock_failure_rate')) {
+    sqlite.exec("ALTER TABLE settings ADD COLUMN mock_failure_rate INTEGER NOT NULL DEFAULT 0");
+  }
+}
+
 let dbInstance: ReturnType<typeof drizzle> | null = null;
 
 export function getDb() {
@@ -44,9 +57,13 @@ export function getDb() {
     CREATE TABLE IF NOT EXISTS settings (
       token TEXT PRIMARY KEY,
       language TEXT NOT NULL DEFAULT 'zh',
-      theme TEXT NOT NULL DEFAULT 'light'
+      theme TEXT NOT NULL DEFAULT 'light',
+      mock_delay_ms INTEGER NOT NULL DEFAULT 600,
+      mock_failure_rate INTEGER NOT NULL DEFAULT 0
     );
   `);
+
+  ensureSettingsColumns(sqlite);
 
   return dbInstance;
 }
