@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useState, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { getClientServices } from '@/application';
 import { useApp } from '@/contexts/AppContext';
+import type { Scene } from '@/domain/storyboard';
 
 interface SpeechRecognition extends EventTarget {
   lang: string;
@@ -62,8 +62,37 @@ const templates = [
   { id: 'edu', name: '教育培训', content: '专业师资，科学方法，让学习成为乐趣。个性化教学，因材施教，每个孩子都是独特的未来之星。' },
 ];
 
+const sceneTemplates = [
+  '开场问题抛出',
+  '产品亮相',
+  '核心卖点演示',
+  '效果对比',
+  '用户反馈',
+  '品牌收束',
+];
+
+function enrichScenes(scenes: Scene[]): Scene[] {
+  return scenes.map((scene) => ({
+    ...scene,
+    shotPrompt: `分镜${scene.id}：${sceneTemplates[(scene.id - 1) % 6]}，围绕"${scene.dialogue.slice(0, 20)}..."展开，保持信息聚焦、镜头稳定、产品表达明确，画面风格统一。`,
+    firstFrame: {
+      sceneDescription: `极简室内场景，主体位于画面中央。重点表现：${scene.dialogue.slice(0, 28)}。`,
+      characterPerformance: '角色动作克制自然，表情从困扰转为放松，突出情绪变化。',
+      cameraAngle: '中近景，平视机位，轻微推进镜头强化叙事节奏。',
+      lighting: '柔和主光配合侧逆光，保留产品轮廓和面部层次。',
+      atmosphere: '干净、专业、可信赖。',
+    },
+    lastFrame: {
+      sceneDescription: `产品与用户同框，形成问题到解决方案的清晰对照。重点表现：${scene.dialogue.slice(0, 28)}。`,
+      characterPerformance: '角色目光聚焦产品，动作简洁明确，强调使用效果。',
+      cameraAngle: '三分法构图，稳定机位，保留足够信息量用于后续转场。',
+      lighting: '明亮自然光，局部补光提升质感。',
+      atmosphere: '高效、轻松、具有转化感。',
+    },
+  }));
+}
+
 export default function SmartCreatePage() {
-  const router = useRouter();
   const { settings } = useApp();
   const { storyboardService, sessionService } = getClientServices();
   const [inputMethod, setInputMethod] = useState<InputMethod>('text');
@@ -74,6 +103,10 @@ export default function SmartCreatePage() {
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [generatedScenes, setGeneratedScenes] = useState<Scene[]>([]);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [syncedIds, setSyncedIds] = useState<Set<number>>(new Set());
 
   const recognitionRef = useRef<SpeechRecognition | null>(null) as React.MutableRefObject<SpeechRecognition | null>;
 
@@ -84,27 +117,40 @@ export default function SmartCreatePage() {
 
   const isInputValid = script.trim().length > 0 && script.length <= 3000;
 
+  useEffect(() => {
+    if (!errorMessage) return;
+    const t = setTimeout(() => setErrorMessage(''), 4000);
+    return () => clearTimeout(t);
+  }, [errorMessage]);
+
   const handleGenerate = useCallback(async () => {
     if (!isInputValid) return;
+    if (script.trim().length < 20) {
+      setErrorMessage('广告文案过短，建议补充产品特点、使用场景或转化诉求。');
+      return;
+    }
     setLoading(true);
+    setShowResults(false);
     try {
       const draft = await storyboardService.splitScenes({
         script,
         duration: selectedDuration,
         wordCount,
       });
+      const enriched = enrichScenes(draft.scenes);
+      setGeneratedScenes(enriched);
+      setShowResults(true);
       await sessionService.saveAutoSession({ ...draft, wordCount });
-      router.push('/result');
     } catch {
-      alert('分镜生成失败，请稍后重试');
+      setErrorMessage('分镜生成失败，请稍后重试');
     } finally {
       setLoading(false);
     }
-  }, [isInputValid, script, selectedDuration, wordCount, storyboardService, sessionService, router]);
+  }, [isInputValid, script, selectedDuration, wordCount, storyboardService, sessionService]);
 
   const handleImportUrl = useCallback(async () => {
     if (!urlInput.trim()) {
-      alert('请输入有效的 URL');
+      setErrorMessage('请输入需要提取的网页链接。');
       return;
     }
     setImporting(true);
@@ -113,7 +159,7 @@ export default function SmartCreatePage() {
       setScript(content.slice(0, 3000));
       setInputMethod('text');
     } catch {
-      alert('链接导入失败');
+      setErrorMessage('链接导入失败');
     } finally {
       setImporting(false);
     }
@@ -122,8 +168,12 @@ export default function SmartCreatePage() {
   const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!file.name.endsWith('.txt')) {
+      setErrorMessage('当前仅支持 .txt 文件。');
+      return;
+    }
     if (file.size > 10 * 1024 * 1024) {
-      alert('文件过大，请选择小于10MB的文件');
+      setErrorMessage('文件过大，请选择小于10MB的文件');
       return;
     }
     try {
@@ -131,7 +181,7 @@ export default function SmartCreatePage() {
       setScript(text.slice(0, 3000));
       setInputMethod('text');
     } catch {
-      alert('文件读取失败');
+      setErrorMessage('文件读取失败');
     }
   }, []);
 
@@ -139,7 +189,7 @@ export default function SmartCreatePage() {
     const w = window as unknown as Record<string, unknown>;
     const SpeechRecognitionAPI = w.SpeechRecognition || w.webkitSpeechRecognition;
     if (!SpeechRecognitionAPI) {
-      alert('您的浏览器不支持语音输入，请使用Chrome或Edge浏览器');
+      setErrorMessage('您的浏览器不支持语音输入，请使用Chrome或Edge浏览器');
       return;
     }
     if (recording) {
@@ -162,7 +212,7 @@ export default function SmartCreatePage() {
 
     recognition.onerror = () => {
       setRecording(false);
-      alert('语音识别出错，请重试');
+      setErrorMessage('语音识别出错，请重试');
     };
 
     recognition.onend = () => {
@@ -173,6 +223,63 @@ export default function SmartCreatePage() {
     recognition.start();
     setRecording(true);
   }, [recording]);
+
+  const updateResultScene = useCallback((sceneId: number, field: string, value: string) => {
+    setGeneratedScenes((prev) => prev.map((s) => {
+      if (s.id !== sceneId) return s;
+      if (field === 'shotPrompt') return { ...s, shotPrompt: value };
+      if (field === 'dialogue') return { ...s, dialogue: value };
+      if (field === 'firstFrameSceneDescription') return { ...s, firstFrame: { ...s.firstFrame!, sceneDescription: value } };
+      if (field === 'lastFrameSceneDescription') return { ...s, lastFrame: { ...s.lastFrame!, sceneDescription: value } };
+      return s;
+    }));
+  }, []);
+
+  const handleCopyScene = useCallback(async (scene: Scene) => {
+    const text = [
+      `场景 ${scene.id} · ${scene.duration}秒`,
+      `画面描述：${sceneTemplates[(scene.id - 1) % 6]}`,
+      `旁白：${scene.dialogue}`,
+      `镜头提示词：${scene.shotPrompt || ''}`,
+      `首帧提示词：${scene.firstFrame?.sceneDescription || ''}`,
+      `尾帧提示词：${scene.lastFrame?.sceneDescription || ''}`,
+    ].join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      setErrorMessage('复制失败');
+    }
+  }, []);
+
+  const handleSyncToManual = useCallback(async (scene: Scene) => {
+    try {
+      let manualSession = await sessionService.loadManualSession();
+      if (!manualSession) {
+        manualSession = {
+          sessionType: 'manual',
+          script: 'Manual Create',
+          duration: selectedDuration,
+          wordCount,
+          scenes: [],
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      const nextId = manualSession.scenes.length
+        ? Math.max(...manualSession.scenes.map((s) => s.id)) + 1
+        : 1;
+      manualSession.scenes.push({
+        id: nextId,
+        name: `分镜${nextId}（${selectedDuration}秒）`,
+        dialogue: scene.dialogue,
+        duration: selectedDuration,
+      });
+      manualSession.updatedAt = new Date().toISOString();
+      await sessionService.saveManualSession(manualSession);
+      setSyncedIds((prev) => new Set([...prev, scene.id]));
+    } catch {
+      setErrorMessage('同步失败');
+    }
+  }, [sessionService, selectedDuration, wordCount]);
 
   if (!settings) {
     return (
@@ -186,13 +293,14 @@ export default function SmartCreatePage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-[28px] font-bold text-gray-900">FatMug 智能分镜</h1>
-        <p className="mt-1 text-sm text-gray-500">输入广告对白，智能生成分镜脚本</p>
+        <p className="mt-1 text-sm text-gray-500">将广告文案拆解为镜头脚本、旁白与首尾帧提示词</p>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-[8px] p-6 shadow-sm">
         <div className="space-y-6">
           <section>
             <h2 className="text-sm font-semibold text-gray-900 mb-3">选择分镜时长</h2>
+            <p className="text-xs text-gray-500 mb-3">根据短视频节奏选择单个镜头长度，系统会自动控制每镜旁白密度。</p>
             <div className="grid grid-cols-3 gap-3">
               {durationConfigs.map((config) => (
                 <button
@@ -341,6 +449,12 @@ export default function SmartCreatePage() {
             </div>
           </section>
 
+          {errorMessage && (
+            <div className="bg-red-50 border border-red-200 rounded-[6px] px-4 py-2.5 text-xs text-red-700">
+              {errorMessage}
+            </div>
+          )}
+
           <button
             type="button"
             onClick={handleGenerate}
@@ -348,7 +462,7 @@ export default function SmartCreatePage() {
             className={`w-full h-11 rounded-[6px] text-sm font-medium transition-colors ${
               loading || !isInputValid
                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                : 'bg-gray-900 text-white hover:bg-gray-800'
+                : 'bg-gray-900 text-white hover:bg-gray-800 active:scale-[0.98]'
             }`}
           >
             {loading ? '生成中...' : '生成分镜'}
@@ -356,12 +470,111 @@ export default function SmartCreatePage() {
         </div>
       </div>
 
+      {loading && !showResults && (
+        <div className="bg-white border border-gray-200 rounded-[8px] p-6 shadow-sm animate-pulse space-y-3">
+          <div className="h-4 bg-gray-200 rounded w-1/3" />
+          <div className="h-16 bg-gray-100 rounded-[6px]" />
+          <div className="h-16 bg-gray-100 rounded-[6px]" />
+          <div className="h-16 bg-gray-100 rounded-[6px]" />
+        </div>
+      )}
+
+      {showResults && generatedScenes.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-[8px] p-6 shadow-sm">
+          <h2 className="text-sm font-semibold text-gray-900">生成结果</h2>
+          <p className="text-xs text-gray-400 mt-0.5 mb-4">AI 已根据广告文案拆解为可编辑的镜头脚本</p>
+          <div className="space-y-4">
+            {generatedScenes.map((scene) => (
+              <div key={scene.id} className="border border-gray-200 rounded-[6px] p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold text-gray-900">
+                    场景 {scene.id} · {scene.duration}秒
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyScene(scene)}
+                      className="text-xs text-gray-400 hover:text-gray-600 transition-colors px-2 py-1 rounded-[4px] hover:bg-gray-50"
+                    >
+                      复制
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSyncToManual(scene)}
+                      disabled={syncedIds.has(scene.id)}
+                      className={`text-xs px-2 py-1 rounded-[4px] transition-colors ${
+                        syncedIds.has(scene.id)
+                          ? 'text-gray-300 cursor-default'
+                          : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {syncedIds.has(scene.id) ? '已同步' : '同步到手工分镜'}
+                    </button>
+                  </div>
+                </div>
+
+                <dl className="space-y-2 text-xs">
+                  <div>
+                    <dt className="text-gray-400">画面描述</dt>
+                    <dd className="text-gray-700 mt-0.5">{sceneTemplates[(scene.id - 1) % 6]}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-400">旁白</dt>
+                    <dd>
+                      <textarea
+                        value={scene.dialogue}
+                        onChange={(e) => updateResultScene(scene.id, 'dialogue', e.target.value)}
+                        className="w-full mt-0.5 bg-transparent border-0 p-0 text-sm text-gray-700 resize-none focus:outline-none"
+                        rows={2}
+                      />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-400">镜头提示词</dt>
+                    <dd>
+                      <textarea
+                        value={scene.shotPrompt || ''}
+                        onChange={(e) => updateResultScene(scene.id, 'shotPrompt', e.target.value)}
+                        className="w-full mt-0.5 bg-transparent border-0 p-0 text-sm text-gray-700 resize-none focus:outline-none"
+                        rows={2}
+                      />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-400">首帧提示词</dt>
+                    <dd>
+                      <textarea
+                        value={scene.firstFrame?.sceneDescription || ''}
+                        onChange={(e) => updateResultScene(scene.id, 'firstFrameSceneDescription', e.target.value)}
+                        className="w-full mt-0.5 bg-transparent border-0 p-0 text-sm text-gray-700 resize-none focus:outline-none"
+                        rows={2}
+                      />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-400">尾帧提示词</dt>
+                    <dd>
+                      <textarea
+                        value={scene.lastFrame?.sceneDescription || ''}
+                        onChange={(e) => updateResultScene(scene.id, 'lastFrameSceneDescription', e.target.value)}
+                        className="w-full mt-0.5 bg-transparent border-0 p-0 text-sm text-gray-700 resize-none focus:outline-none"
+                        rows={2}
+                      />
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="bg-white border border-gray-200 rounded-[8px] p-4 shadow-sm">
         <h3 className="text-sm font-semibold text-gray-900 mb-2">使用提示</h3>
         <ul className="space-y-1 text-xs text-gray-500">
-          <li>建议输入完整的广告文案，包含产品特点和使用场景</li>
-          <li>根据广告时长选择合适的分镜时长</li>
-          <li>生成的分镜可以后续调整和优化</li>
+          <li>建议输入完整广告文案，包括产品卖点、使用场景和转化目标</li>
+          <li>不同时长适合不同节奏：5秒适合快节奏切片，10-12秒适合完整卖点表达</li>
+          <li>生成结果可同步到手工分镜继续调整镜头、提示词和参考图</li>
         </ul>
       </div>
     </div>

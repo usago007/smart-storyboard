@@ -99,8 +99,30 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-[28px] font-bold text-gray-900">系统配置</h1>
         <p className="mt-1 text-sm text-gray-500">
-          {language === 'zh' ? '当前系统API接口、数据库和大模型配置（仅供开发人员查看）' : 'System API, database, and model configuration (developer only)'}
+          {language === 'zh' ? '开发者/管理员用于查看 API、模型、数据库与环境变量状态。' : 'Developer/admin page for reviewing API, model, database, and environment variable status.'}
         </p>
+      </div>
+
+      <div className="grid grid-cols-4 gap-3">
+        <div className="border border-gray-200 rounded-[8px] p-4">
+          <div className="text-xs text-gray-400">API 接口</div>
+          <div className="text-lg font-semibold text-gray-900 mt-1">8 个接口</div>
+        </div>
+        <div className="border border-gray-200 rounded-[8px] p-4">
+          <div className="text-xs text-gray-400">文本模型</div>
+          <div className="text-lg font-semibold text-gray-900 mt-1">4 项已启用</div>
+        </div>
+        <div className="border border-gray-200 rounded-[8px] p-4">
+          <div className="text-xs text-gray-400">图片模型</div>
+          <div className="text-lg font-semibold text-gray-900 mt-1">1 项已配置</div>
+        </div>
+        <div className="border border-gray-200 rounded-[8px] p-4">
+          <div className="text-xs text-gray-400">数据库</div>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+            <span className="text-sm font-medium text-gray-900">未连接</span>
+          </div>
+        </div>
       </div>
 
       <SectionCard title="API接口配置">
