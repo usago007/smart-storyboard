@@ -54,7 +54,7 @@ export default function ManualCreatePage() {
   const { sessionService } = getClientServices();
   const [session, setSession] = useState<StoryboardSession | null>(null);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [lockedScenes, setLockedScenes] = useState<Set<number>>(new Set());
   const { showToast } = useToast();
 
@@ -64,14 +64,16 @@ export default function ManualCreatePage() {
       try {
         const restored = await sessionService.loadManualSession();
         if (!active) return;
-        setSession(restored || {
+        const nextSession = restored || {
           sessionType: 'manual',
           script: 'Manual Create',
           duration: 5,
           wordCount: 42,
-          scenes: [createScene(1)],
+          scenes: [],
           updatedAt: new Date().toISOString(),
-        });
+        };
+        setSession(nextSession);
+        setExpanded(new Set(nextSession.scenes.map((s) => s.id)));
       } catch {
         showToast('手工分镜初始化失败', 'error');
       } finally {
@@ -105,6 +107,7 @@ export default function ManualCreatePage() {
     setSession((current) => {
       if (!current) return current;
       const nextId = current.scenes.length ? Math.max(...current.scenes.map((s) => s.id)) + 1 : 1;
+      setExpanded((prev) => new Set([...prev, nextId]));
       return { ...current, scenes: [...current.scenes, createScene(nextId, current.duration)] };
     });
   }, []);
@@ -121,13 +124,13 @@ export default function ManualCreatePage() {
           mockContent = '开篇全景，温暖的自然光线洒入室内，主角由远及近走来。';
           break;
         case 'firstFrameImage':
-          mockContent = 'https://picsum.photos/seed/frame1/800/600';
+          mockContent = 'mock:first-frame';
           break;
         case 'lastFramePrompt':
           mockContent = '结尾特写，产品在主角手中绽放光芒，品牌Logo淡入。';
           break;
         case 'lastFrameImage':
-          mockContent = 'https://picsum.photos/seed/frame2/800/600';
+          mockContent = 'mock:last-frame';
           break;
       }
       updateScene(scene.id, (item) => {
@@ -152,8 +155,8 @@ export default function ManualCreatePage() {
       shotPrompt: '镜头缓缓推进，特写产品细节，背景虚化突出主体。',
       firstFrame: { sceneDescription: '开篇全景，温暖的自然光线洒入室内，主角由远及近走来。', characterPerformance: '', cameraAngle: '', lighting: '', atmosphere: '' },
       lastFrame: { sceneDescription: '结尾特写，产品在主角手中绽放光芒，品牌Logo淡入。', characterPerformance: '', cameraAngle: '', lighting: '', atmosphere: '' },
-      firstFrameImage: 'https://picsum.photos/seed/frame1/800/600',
-      lastFrameImage: 'https://picsum.photos/seed/frame2/800/600',
+      firstFrameImage: 'mock:first-frame',
+      lastFrameImage: 'mock:last-frame',
     }));
   }, [session, updateScene]);
 
@@ -180,6 +183,43 @@ export default function ManualCreatePage() {
     });
     if (!wasLocked) showToast('已锁定', 'success');
   }, [showToast, lockedScenes]);
+
+  const handleDeleteScene = useCallback((sceneId: number) => {
+    if (!window.confirm(`确定删除分镜 ${sceneId} 吗？此操作不可恢复。`)) {
+      return;
+    }
+
+    setSession((current) => {
+      if (!current) return current;
+
+      const filtered = current.scenes.filter((s) => s.id !== sceneId);
+      if (filtered.length === current.scenes.length) return current;
+
+      const renumbered = filtered.map((s, i) => ({
+        ...s,
+        id: i + 1,
+        name: `分镜${i + 1}（${s.duration}秒）`,
+      }));
+
+      setExpanded((prev) => {
+        const next = new Set<number>();
+        filtered.forEach((s, i) => {
+          if (prev.has(s.id)) next.add(i + 1);
+        });
+        return next;
+      });
+
+      setLockedScenes((prev) => {
+        const next = new Set<number>();
+        filtered.forEach((s, i) => {
+          if (prev.has(s.id)) next.add(i + 1);
+        });
+        return next;
+      });
+
+      return { ...current, scenes: renumbered };
+    });
+  }, []);
 
   const handleCopyFullScene = useCallback(async (scene: Scene) => {
     const text = [
@@ -220,6 +260,23 @@ export default function ManualCreatePage() {
         用于校正 AI 初稿，精修镜头表达、首尾帧提示词和参考图。
       </p>
 
+      {session.scenes.length === 0 && (
+        <div className="bg-white border border-gray-200 rounded-[8px] p-10 shadow-sm flex flex-col items-center text-center">
+          <h3 className="text-base font-semibold text-gray-900 mb-2">暂无分镜</h3>
+          <p className="text-sm text-gray-500 max-w-[300px] mb-6">
+            可以从智能分镜同步生成结果，也可以手动添加一个分镜。
+          </p>
+          <button
+            type="button"
+            onClick={addScene}
+            className="h-10 px-5 rounded-[6px] bg-gray-900 text-white text-sm hover:bg-gray-800 transition-colors active:scale-[0.98]"
+          >
+            添加第一个分镜
+          </button>
+        </div>
+      )}
+
+      {session.scenes.length > 0 && (
       <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
         {session.scenes.map((scene) => {
           const status = getSceneStatus(scene, lockedScenes);
@@ -241,6 +298,7 @@ export default function ManualCreatePage() {
           );
         })}
       </div>
+      )}
 
       {session.scenes.map((scene) => {
         const range = durationRange[scene.duration] || '35-50';
@@ -250,7 +308,7 @@ export default function ManualCreatePage() {
             <div className="flex items-center justify-between">
               <button
                 type="button"
-                onClick={() => setExpanded(!expanded)}
+                onClick={() => setExpanded((prev) => { const next = new Set(prev); if (next.has(scene.id)) next.delete(scene.id); else next.add(scene.id); return next; })}
                 className="flex items-center gap-2"
               >
                 <span className="text-sm font-semibold text-gray-900">分镜{scene.id}（{scene.duration}秒）</span>
@@ -265,7 +323,7 @@ export default function ManualCreatePage() {
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
-                  className={`text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                  className={`text-gray-400 transition-transform ${expanded.has(scene.id) ? 'rotate-180' : ''}`}
                 >
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
@@ -286,26 +344,30 @@ export default function ManualCreatePage() {
                   </svg>
                   复制完整分镜
                 </button>
-                <button
-                  type="button"
-                  onClick={() => handleGenerateAll(scene)}
-                  disabled={isLocked}
-                  className={`text-xs px-2.5 py-1 rounded-[4px] transition-colors ${
-                    isLocked ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-100'
-                  }`}
-                >
-                  生成全部
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleRegenerate(scene)}
-                  disabled={isLocked}
-                  className={`text-xs px-2.5 py-1 rounded-[4px] transition-colors ${
-                    isLocked ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-100'
-                  }`}
-                >
-                  重新生成
-                </button>
+                {expanded.has(scene.id) && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleGenerateAll(scene)}
+                      disabled={isLocked}
+                      className={`text-xs px-2.5 py-1 rounded-[4px] transition-colors ${
+                        isLocked ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-100'
+                      }`}
+                    >
+                      生成全部
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRegenerate(scene)}
+                      disabled={isLocked}
+                      className={`text-xs px-2.5 py-1 rounded-[4px] transition-colors ${
+                        isLocked ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-100'
+                      }`}
+                    >
+                      重新生成
+                    </button>
+                  </>
+                )}
                 <button
                   type="button"
                   onClick={() => handleToggleLock(scene.id)}
@@ -315,10 +377,20 @@ export default function ManualCreatePage() {
                 >
                   {isLocked ? '解锁' : '锁定'}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteScene(scene.id)}
+                  disabled={isLocked}
+                  className={`text-xs px-2.5 py-1 rounded-[4px] transition-colors ${
+                    isLocked ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                  }`}
+                >
+                  删除
+                </button>
               </div>
             </div>
 
-            {expanded && (
+            {expanded.has(scene.id) && (
               <div className="mt-4 space-y-4">
                 <div>
                   <h3 className="text-xs font-medium text-gray-400 mb-2">基础内容</h3>
@@ -453,7 +525,9 @@ export default function ManualCreatePage() {
                           </button>
                         </div>
                         {area.url ? (
-                          <img src={area.url} alt="" className="w-full h-16 object-cover rounded-[4px] border border-gray-200" />
+                          <div className="h-[72px] bg-gray-50 border border-dashed border-gray-300 rounded-[4px] flex items-center justify-center text-xs text-gray-500">
+                            {area.key === 'firstFrameImage' ? '首帧参考图已生成' : '尾帧参考图已生成'}
+                          </div>
                         ) : (
                           <div className="h-12 bg-gray-50 rounded-[4px] flex items-center justify-center text-xs text-gray-400">
                             {area.key === 'firstFrameImage' ? '点击生成首帧参考图' : '点击生成尾帧参考图'}
@@ -469,15 +543,17 @@ export default function ManualCreatePage() {
         );
       })}
 
-      <div className="flex justify-center pt-2">
-        <button
-          type="button"
-          onClick={addScene}
-          className="h-10 px-5 rounded-[6px] bg-gray-900 text-white text-sm hover:bg-gray-800 transition-colors active:scale-[0.98]"
-        >
-          添加新分镜
-        </button>
-      </div>
+      {session.scenes.length > 0 && (
+        <div className="flex justify-center pt-2">
+          <button
+            type="button"
+            onClick={addScene}
+            className="h-10 px-5 rounded-[6px] bg-gray-900 text-white text-sm hover:bg-gray-800 transition-colors active:scale-[0.98]"
+          >
+            添加新分镜
+          </button>
+        </div>
+      )}
     </div>
   );
 }

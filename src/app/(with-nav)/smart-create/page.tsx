@@ -302,10 +302,9 @@ export default function SmartCreatePage() {
         ? Math.max(...manualSession.scenes.map((s) => s.id)) + 1
         : 1;
       manualSession.scenes.push({
+        ...scene,
         id: nextId,
-        name: `分镜${nextId}（${selectedDuration}秒）`,
-        dialogue: scene.dialogue,
-        duration: selectedDuration,
+        name: `分镜${nextId}（${scene.duration}秒）`,
       });
       manualSession.updatedAt = new Date().toISOString();
       await sessionService.saveManualSession(manualSession);
@@ -333,10 +332,9 @@ export default function SmartCreatePage() {
         ? Math.max(...manualSession.scenes.map((s) => s.id)) + 1
         : 1;
       const newScenes = generatedScenes.map((scene, i) => ({
+        ...scene,
         id: nextId + i,
-        name: `分镜${nextId + i}（${selectedDuration}秒）`,
-        dialogue: scene.dialogue,
-        duration: selectedDuration,
+        name: `分镜${nextId + i}（${scene.duration}秒）`,
       }));
       manualSession.scenes.push(...newScenes);
       manualSession.updatedAt = new Date().toISOString();
