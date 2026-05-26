@@ -34,7 +34,7 @@ jobs:
           BUILD_EXPORT: "true"
           NEXT_PUBLIC_BASE_PATH: /smart-storyboard
           NEXT_PUBLIC_DATA_MODE: mock
-      - uses: actions/upload-pages-artifact@v5
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: out
       - uses: actions/deploy-pages@v4
