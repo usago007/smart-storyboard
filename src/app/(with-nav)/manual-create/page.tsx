@@ -1,11 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback } from 'react';
 import { getClientServices } from '@/application';
 import type { Scene, StoryboardSession } from '@/domain/storyboard';
-import { useApp } from '@/contexts/AppContext';
-import { showErrorAlert } from '@/lib/error-handler';
 
 function createScene(id: number, duration = 5): Scene {
   return {
@@ -16,26 +13,24 @@ function createScene(id: number, duration = 5): Scene {
   };
 }
 
+const durationRange: Record<number, string> = {
+  5: '35-50',
+  10: '70-100',
+  12: '84-120',
+};
+
 export default function ManualCreatePage() {
-  const router = useRouter();
-  const { language, settings } = useApp();
-  const { storyboardService, sessionService, assetService } = getClientServices();
+  const { sessionService } = getClientServices();
   const [session, setSession] = useState<StoryboardSession | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [shotLoading, setShotLoading] = useState<Record<number, boolean>>({});
-  const [frameLoading, setFrameLoading] = useState<Record<string, boolean>>({});
-  const [imageLoading, setImageLoading] = useState<Record<string, boolean>>({});
+  const [expanded, setExpanded] = useState(true);
 
   useEffect(() => {
     let active = true;
     const initialize = async () => {
       try {
         const restored = await sessionService.loadManualSession();
-        if (!active) {
-          return;
-        }
-
+        if (!active) return;
         setSession(restored || {
           sessionType: 'manual',
           script: 'Manual Create',
@@ -44,28 +39,19 @@ export default function ManualCreatePage() {
           scenes: [createScene(1)],
           updatedAt: new Date().toISOString(),
         });
-      } catch (error) {
-        showErrorAlert(error, language === 'zh' ? '手工分镜初始化失败' : 'Failed to initialize manual scene');
+      } catch {
+        alert('手工分镜初始化失败');
       } finally {
-        if (active) {
-          setLoading(false);
-        }
+        if (active) setLoading(false);
       }
     };
-
     void initialize();
-    return () => {
-      active = false;
-    };
-  }, [language, sessionService]);
+    return () => { active = false; };
+  }, [sessionService]);
 
   useEffect(() => {
-    if (!session || loading) {
-      return;
-    }
-
-    const timer = window.setTimeout(async () => {
-      setSaving(true);
+    if (!session || loading) return;
+    const timer = setTimeout(async () => {
       try {
         await sessionService.saveManualSession({
           script: session.script,
@@ -73,259 +59,213 @@ export default function ManualCreatePage() {
           wordCount: session.wordCount,
           scenes: session.scenes,
         });
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setSaving(false);
-      }
+      } catch { /* ignore */ }
     }, 300);
-
-    return () => window.clearTimeout(timer);
+    return () => clearTimeout(timer);
   }, [loading, session, sessionService]);
 
-  const updateScene = (sceneId: number, updater: (scene: Scene) => Scene) => {
-    setSession((current) => current ? {
-      ...current,
-      scenes: current.scenes.map((scene) => scene.id === sceneId ? updater(scene) : scene),
-    } : current);
-  };
+  const updateScene = useCallback((sceneId: number, updater: (scene: Scene) => Scene) => {
+    setSession((current) => (current ? { ...current, scenes: current.scenes.map((s) => s.id === sceneId ? updater(s) : s) } : current));
+  }, []);
 
-  const addScene = () => {
+  const addScene = useCallback(() => {
     setSession((current) => {
-      if (!current) {
-        return current;
-      }
-      const nextId = current.scenes.length ? Math.max(...current.scenes.map((scene) => scene.id)) + 1 : 1;
-      return {
-        ...current,
-        scenes: [...current.scenes, createScene(nextId, current.duration)],
-      };
+      if (!current) return current;
+      const nextId = current.scenes.length ? Math.max(...current.scenes.map((s) => s.id)) + 1 : 1;
+      return { ...current, scenes: [...current.scenes, createScene(nextId, current.duration)] };
     });
-  };
+  }, []);
 
-  const removeScene = (sceneId: number) => {
-    setSession((current) => current ? {
-      ...current,
-      scenes: current.scenes.filter((scene) => scene.id !== sceneId),
-    } : current);
-  };
-
-  const handleGeneratePrompt = async (scene: Scene) => {
-    setShotLoading((current) => ({ ...current, [scene.id]: true }));
+  const handleGenerate = useCallback(async (scene: Scene, field: string) => {
+    if (!session) return;
     try {
-      const shotPrompt = await storyboardService.generateShotPrompt(scene);
-      updateScene(scene.id, (item) => ({ ...item, shotPrompt }));
-    } catch (error) {
-      showErrorAlert(error, language === 'zh' ? '镜头提示词生成失败' : 'Prompt generation failed');
-    } finally {
-      setShotLoading((current) => ({ ...current, [scene.id]: false }));
+      let mockContent = '';
+      switch (field) {
+        case 'shotPrompt':
+          mockContent = '镜头缓缓推进，特写产品细节，背景虚化突出主体。';
+          break;
+        case 'firstFramePrompt':
+          mockContent = '开篇全景，温暖的自然光线洒入室内，主角由远及近走来。';
+          break;
+        case 'firstFrameImage':
+          mockContent = 'https://picsum.photos/seed/frame1/800/600';
+          break;
+        case 'lastFramePrompt':
+          mockContent = '结尾特写，产品在主角手中绽放光芒，品牌Logo淡入。';
+          break;
+        case 'lastFrameImage':
+          mockContent = 'https://picsum.photos/seed/frame2/800/600';
+          break;
+      }
+      updateScene(scene.id, (item) => {
+        switch (field) {
+          case 'shotPrompt': return { ...item, shotPrompt: mockContent };
+          case 'firstFramePrompt': return { ...item, firstFrame: { sceneDescription: mockContent, characterPerformance: '', cameraAngle: '', lighting: '', atmosphere: '' } };
+          case 'firstFrameImage': return { ...item, firstFrameImage: mockContent };
+          case 'lastFramePrompt': return { ...item, lastFrame: { sceneDescription: mockContent, characterPerformance: '', cameraAngle: '', lighting: '', atmosphere: '' } };
+          case 'lastFrameImage': return { ...item, lastFrameImage: mockContent };
+          default: return item;
+        }
+      });
+    } catch {
+      alert('生成失败');
     }
-  };
-
-  const handleGenerateFrame = async (scene: Scene, frameType: 'first' | 'last') => {
-    const key = `${scene.id}-${frameType}`;
-    setFrameLoading((current) => ({ ...current, [key]: true }));
-    try {
-      const nextScene = await storyboardService.generateFrame(scene, frameType);
-      updateScene(scene.id, () => nextScene);
-    } catch (error) {
-      showErrorAlert(error, language === 'zh' ? '首尾帧生成失败' : 'Frame generation failed');
-    } finally {
-      setFrameLoading((current) => ({ ...current, [key]: false }));
-    }
-  };
-
-  const handleGenerateImage = async (scene: Scene, frameType: 'first' | 'last') => {
-    const key = `${scene.id}-${frameType}`;
-    setImageLoading((current) => ({ ...current, [key]: true }));
-    try {
-      const imageUrl = await assetService.generateImage(scene, frameType);
-      updateScene(scene.id, (item) => (
-        frameType === 'first'
-          ? { ...item, firstFrameImage: imageUrl }
-          : { ...item, lastFrameImage: imageUrl }
-      ));
-    } catch (error) {
-      showErrorAlert(error, language === 'zh' ? '图片生成失败' : 'Image generation failed');
-    } finally {
-      setImageLoading((current) => ({ ...current, [key]: false }));
-    }
-  };
+  }, [session, updateScene]);
 
   if (loading || !session) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-        {language === 'zh' ? '加载手工分镜中...' : 'Loading manual scene...'}
+      <div className="min-h-[60vh] flex items-center justify-center text-sm text-gray-400">
+        加载中...
       </div>
     );
   }
 
+  const totalChars = session.scenes.reduce((sum, s) => sum + s.dialogue.length, 0);
+
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-black">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold text-gray-900 dark:text-white">
-              {language === 'zh' ? '手工分镜' : 'Manual Storyboard'}
-            </h1>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-              {language === 'zh'
-                ? `这一页当前由 ${settings?.dataMode || 'mock'} 模式托管会话。你可以增删改查分镜内容，并生成提示词、首尾帧和占位图。`
-                : `This page currently stores sessions in ${settings?.dataMode || 'mock'} mode. Create, edit, remove, and enrich scenes with prompts, frames, and placeholder images.`}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-base font-semibold text-gray-900 text-center flex-1">
+          手工创建分镜 · {session.scenes.length} 个
+        </h1>
+        <span className="text-xs text-gray-400">{session.duration}秒 {totalChars}字</span>
+      </div>
+
+      {session.scenes.map((scene) => {
+        const range = durationRange[scene.duration] || '35-50';
+        return (
+          <div key={scene.id} className="bg-white border border-gray-200 rounded-[8px] p-4 shadow-sm">
             <button
               type="button"
-              onClick={addScene}
-              className="rounded-2xl border border-gray-200 px-4 py-2 text-sm dark:border-gray-700"
+              onClick={() => setExpanded(!expanded)}
+              className="w-full flex items-center justify-between"
             >
-              {language === 'zh' ? '新增分镜' : 'Add Scene'}
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push('/settings')}
-              className="rounded-2xl bg-black px-4 py-2 text-sm text-white dark:bg-white dark:text-black"
-            >
-              {language === 'zh' ? '查看演示配置' : 'View Settings'}
-            </button>
-          </div>
-        </div>
-        <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-          {saving
-            ? (language === 'zh' ? '正在自动保存...' : 'Autosaving...')
-            : (language === 'zh'
-              ? `${settings?.dataMode === 'remote' ? '远端' : '本地'}会话已接管自动保存`
-              : `Autosave is handled by ${settings?.dataMode === 'remote' ? 'remote' : 'local'} session persistence`)}
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        {session.scenes.map((scene) => (
-          <article
-            key={scene.id}
-            className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-black"
-          >
-            <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                  <input
-                    value={scene.name}
-                    onChange={(event) => updateScene(scene.id, (item) => ({ ...item, name: event.target.value }))}
-                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-lg font-semibold outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeScene(scene.id)}
-                    disabled={session.scenes.length === 1}
-                    className="rounded-2xl border border-red-200 px-4 py-3 text-sm text-red-600 disabled:opacity-40 dark:border-red-900/40"
-                  >
-                    {language === 'zh' ? '删除' : 'Delete'}
-                  </button>
-                </div>
-
-                <textarea
-                  value={scene.dialogue}
-                  onChange={(event) => updateScene(scene.id, (item) => ({ ...item, dialogue: event.target.value }))}
-                  rows={5}
-                  placeholder={language === 'zh' ? '输入这个分镜的对白或动作说明' : 'Describe dialogue or action for this scene'}
-                  className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                />
-
-                <textarea
-                  value={scene.shotPrompt || ''}
-                  onChange={(event) => updateScene(scene.id, (item) => ({ ...item, shotPrompt: event.target.value }))}
-                  rows={6}
-                  placeholder={language === 'zh' ? '镜头提示词' : 'Shot prompt'}
-                  className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                />
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleGeneratePrompt(scene)}
-                    className="rounded-full border border-gray-200 px-3 py-1.5 text-xs dark:border-gray-700"
-                  >
-                    {shotLoading[scene.id]
-                      ? (language === 'zh' ? '生成中...' : 'Generating...')
-                      : (language === 'zh' ? '生成提示词' : 'Generate Prompt')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleGenerateFrame(scene, 'first')}
-                    className="rounded-full border border-gray-200 px-3 py-1.5 text-xs dark:border-gray-700"
-                  >
-                    {frameLoading[`${scene.id}-first`]
-                      ? (language === 'zh' ? '首帧生成中...' : 'Generating first...')
-                      : (language === 'zh' ? '生成首帧' : 'First Frame')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleGenerateFrame(scene, 'last')}
-                    className="rounded-full border border-gray-200 px-3 py-1.5 text-xs dark:border-gray-700"
-                  >
-                    {frameLoading[`${scene.id}-last`]
-                      ? (language === 'zh' ? '尾帧生成中...' : 'Generating last...')
-                      : (language === 'zh' ? '生成尾帧' : 'Last Frame')}
-                  </button>
-                </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-gray-900">分镜{scene.id}（{scene.duration}秒）</span>
+                <span className="text-xs text-gray-400">（{scene.duration}秒）· {scene.dialogue.length}字</span>
               </div>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className={`text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
 
-              <div className="space-y-4">
-                {(['first', 'last'] as const).map((frameType) => {
-                  const frame = frameType === 'first' ? scene.firstFrame : scene.lastFrame;
-                  const imageUrl = frameType === 'first' ? scene.firstFrameImage : scene.lastFrameImage;
+            {expanded && (
+              <div className="mt-4 space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-medium text-gray-700">对白</span>
+                    <div className="flex gap-2">
+                      <button type="button" className="text-gray-400 hover:text-gray-600" onClick={() => { void navigator.clipboard.writeText(scene.dialogue); }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                        </svg>
+                      </button>
+                      <button type="button" className="text-gray-400 hover:text-gray-600">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    value={scene.dialogue}
+                    onChange={(e) => updateScene(scene.id, (item) => ({ ...item, dialogue: e.target.value }))}
+                    placeholder="输入对白内容…"
+                    className="w-full h-[70px] border border-gray-300 rounded-[6px] p-3 text-sm text-gray-900 placeholder:text-gray-400 resize-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                  />
+                  <div className="text-xs text-gray-400 mt-1">{scene.dialogue.length} / 建议 {range}</div>
+                </div>
+
+                <div>
+                  <span className="text-xs font-medium text-gray-700 mb-1.5 block">分镜时长</span>
+                  <div className="flex gap-2">
+                    {[5, 10, 12].map((dur) => (
+                      <button
+                        key={dur}
+                        type="button"
+                        onClick={() => updateScene(scene.id, (item) => ({ ...item, duration: dur }))}
+                        className={`h-[34px] px-3 rounded-[6px] text-sm transition-colors ${
+                          scene.duration === dur
+                            ? 'bg-gray-900 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {dur}秒分镜
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {[
+                  { key: 'shotPrompt', label: '镜头提示词', placeholder: '点击生成镜头提示词' },
+                  { key: 'firstFramePrompt', label: '首帧提示词', placeholder: '点击生成首帧提示词' },
+                  { key: 'firstFrameImage', label: '首帧参考图', placeholder: '点击生成首帧参考图' },
+                  { key: 'lastFramePrompt', label: '尾帧提示词', placeholder: '点击生成尾帧提示词' },
+                  { key: 'lastFrameImage', label: '尾帧参考图', placeholder: '点击生成尾帧参考图' },
+                ].map((area) => {
+                  const getContent = () => {
+                    switch (area.key) {
+                      case 'shotPrompt': return scene.shotPrompt;
+                      case 'firstFramePrompt': return scene.firstFrame?.sceneDescription;
+                      case 'firstFrameImage': return scene.firstFrameImage;
+                      case 'lastFramePrompt': return scene.lastFrame?.sceneDescription;
+                      case 'lastFrameImage': return scene.lastFrameImage;
+                      default: return undefined;
+                    }
+                  };
+                  const content = getContent();
                   return (
-                    <div key={frameType} className="rounded-2xl bg-gray-50 p-4 dark:bg-gray-900">
-                      <div className="mb-3 flex items-center justify-between">
-                        <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                          {frameType === 'first'
-                            ? (language === 'zh' ? '首帧信息' : 'First Frame')
-                            : (language === 'zh' ? '尾帧信息' : 'Last Frame')}
-                        </h3>
+                    <div key={area.key}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-medium text-gray-700">{area.label}</span>
                         <button
                           type="button"
-                          onClick={() => handleGenerateImage(scene, frameType)}
-                          className="rounded-full border border-gray-200 px-3 py-1 text-xs dark:border-gray-700"
+                          onClick={() => handleGenerate(scene, area.key)}
+                          className="h-8 px-3 rounded-[6px] bg-gray-100 text-gray-500 text-xs hover:bg-gray-200 transition-colors"
                         >
-                          {imageLoading[`${scene.id}-${frameType}`]
-                            ? (language === 'zh' ? '生成图片中...' : 'Rendering...')
-                            : (language === 'zh' ? '生成图片' : 'Generate Image')}
+                          生成
                         </button>
                       </div>
-
-                      {frame ? (
-                        <div className="space-y-2 text-xs text-gray-600 dark:text-gray-300">
-                          <div>{frame.sceneDescription}</div>
-                          <div>{frame.characterPerformance}</div>
-                          <div>{frame.cameraAngle}</div>
-                          <div>{frame.lighting}</div>
-                          {frame.atmosphere && <div>{frame.atmosphere}</div>}
-                        </div>
+                      {content ? (
+                        area.key === 'firstFrameImage' || area.key === 'lastFrameImage' ? (
+                          <img src={content} alt="" className="w-full h-16 object-cover rounded-[4px] border border-gray-200" />
+                        ) : (
+                          <div className="h-12 bg-gray-50 rounded-[4px] flex items-center justify-center text-xs text-gray-500">
+                            {content}
+                          </div>
+                        )
                       ) : (
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {language === 'zh' ? '尚未生成' : 'Not generated yet'}
+                        <div className="h-12 bg-gray-50 rounded-[4px] flex items-center justify-center text-xs text-gray-400">
+                          {area.placeholder}
                         </div>
-                      )}
-
-                      {imageUrl && (
-                        <button
-                          type="button"
-                          onClick={() => router.push(`/image-viewer?image=${encodeURIComponent(imageUrl)}&name=${encodeURIComponent(`${scene.name}-${frameType}.jpg`)}`)}
-                          className="mt-4 block w-full overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700"
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={imageUrl} alt={`${scene.name}-${frameType}`} className="h-40 w-full object-cover" />
-                        </button>
                       )}
                     </div>
                   );
                 })}
               </div>
-            </div>
-          </article>
-        ))}
-      </section>
+            )}
+          </div>
+        );
+      })}
+
+      <div className="flex justify-center pt-2">
+        <button
+          type="button"
+          onClick={addScene}
+          className="h-10 px-5 rounded-[6px] bg-gray-900 text-white text-sm hover:bg-gray-800 transition-colors"
+        >
+          添加新分镜
+        </button>
+      </div>
     </div>
   );
 }

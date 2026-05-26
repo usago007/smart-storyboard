@@ -1,182 +1,124 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useApp } from '@/contexts/AppContext';
 
-interface NavItem {
-  id: string;
-  label: string;
-  path: string;
-  icon: React.ReactNode;
-}
+const navItems = [
+  {
+    id: 'smart-create',
+    label: '智能分镜',
+    path: '/smart-create',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+        <polyline points="10 9 9 9 8 9" />
+      </svg>
+    ),
+  },
+  {
+    id: 'manual-create',
+    label: '手工分镜',
+    path: '/manual-create',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'settings',
+    label: '系统设置',
+    path: '/settings',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </svg>
+    ),
+  },
+];
+
+const pageHeaders: Record<string, { label: string; icon: React.ReactNode }> = {
+  '/smart-create': {
+    label: '智能分镜',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+        <polyline points="10 9 9 9 8 9" />
+      </svg>
+    ),
+  },
+  '/manual-create': {
+    label: '手工分镜',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+      </svg>
+    ),
+  },
+  '/settings': {
+    label: '系统设置',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </svg>
+    ),
+  },
+};
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { language, theme, setTheme } = useApp();
   const pathname = usePathname();
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
 
-  // 导航项配置
-  const navItems: NavItem[] = [
-    {
-      id: 'smart-create',
-      label: language === 'zh' ? '智能分镜' : 'Smart Scene',
-      path: '/smart-create',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-        </svg>
-      )
-    },
-    {
-      id: 'manual-create',
-      label: language === 'zh' ? '手工分镜' : 'Manual Scene',
-      path: '/manual-create',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-      )
-    },
-    {
-      id: 'settings',
-      label: language === 'zh' ? '系统设置' : 'System Settings',
-      path: '/settings',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      )
-    }
-  ];
-
-  // 检测移动端
-  useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      setSidebarOpen(!mobile);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // 当前激活的导航项
-  const activeNav = navItems.find(item => item.path === pathname);
-
-  const handleNavClick = (path: string) => {
-    router.push(path);
-    if (isMobile) {
-      setSidebarOpen(false);
-    }
-  };
+  const current = pageHeaders[pathname] || { label: '', icon: null };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black flex">
-      {/* 移动端遮罩 */}
-      {isMobile && sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* 左侧导航栏 */}
-      <div className={`
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        ${isMobile ? 'absolute' : 'relative'}
-        z-50 lg:translate-x-0 transition-transform duration-300 ease-in-out
-        w-64 h-screen bg-white dark:bg-black border-r border-gray-200 dark:border-gray-800
-        flex-shrink-0
-      `}>
-        {/* 导航头部 */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 dark:border-gray-800">
-          <h1 className="text-xl font-semibold text-black dark:text-white">
-            FatMug
-          </h1>
-          {isMobile && (
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          )}
+    <div className="flex h-screen bg-gray-50">
+      <aside className="w-[220px] flex-shrink-0 bg-white border-r border-gray-200 flex flex-col">
+        <div className="h-14 flex items-center px-5 border-b border-gray-100">
+          <h1 className="text-xl font-bold tracking-tight text-gray-900">FatMug</h1>
         </div>
-
-        {/* 导航菜单 */}
-        <nav className="p-4 space-y-2">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handleNavClick(item.path)}
-              className={`
-                w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left
-                transition-colors duration-200
-                ${activeNav?.path === item.path
-                  ? 'bg-gray-100 dark:bg-gray-900 text-black dark:text-white border-l-4 border-black dark:border-white'
-                  : 'text-black dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900'
-                }
-              `}
-            >
-              <span className="text-gray-600 dark:text-gray-400">{item.icon}</span>
-              <span className="font-medium">{item.label}</span>
-            </button>
-          ))}
+        <nav className="flex-1 p-3 space-y-1">
+          {navItems.map((item) => {
+            const isActive = pathname === item.path;
+            return (
+              <button
+                key={item.id}
+                onClick={() => router.push(item.path)}
+                className={`w-full flex items-center gap-3 px-4 h-11 rounded-[6px] text-sm transition-colors ${
+                  isActive
+                    ? 'bg-gray-100 text-gray-900 border-l-2 border-gray-900'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                <span className={`flex-shrink-0 ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>
+                  {item.icon}
+                </span>
+                <span className="font-medium">{item.label}</span>
+              </button>
+            );
+          })}
         </nav>
-      </div>
+      </aside>
 
-      {/* 主内容区 */}
-      <div className="flex-1 flex flex-col min-h-screen">
-        {/* 顶部栏 */}
-        <header className="h-16 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-6">
-          <div className="flex items-center space-x-4">
-            {/* 汉堡菜单按钮 */}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            
-            {/* 当前页面标题 */}
-            <div className="flex items-center space-x-2">
-              {activeNav && (
-                <>
-                  <span className="text-xl">{activeNav.icon}</span>
-                  <h2 className="text-lg font-semibold text-black dark:text-white">
-                    {activeNav.label}
-                  </h2>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* 右侧工具栏 */}
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-900"
-            >
-              {theme === 'dark'
-                ? language === 'zh' ? '浅色' : 'Light'
-                : language === 'zh' ? '深色' : 'Dark'}
-            </button>
-          </div>
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="h-14 bg-white border-b border-gray-200 flex items-center gap-2 px-6">
+          {current.icon && (
+            <span className="text-gray-500">{current.icon}</span>
+          )}
+          <h2 className="text-base font-semibold text-gray-900">{current.label}</h2>
         </header>
 
-        {/* 页面内容 */}
-        <main className="flex-1 p-6 overflow-auto">
-          {children}
+        <main className="flex-1 overflow-auto">
+          <div className="max-w-[820px] mx-auto pt-7 px-6 pb-12">
+            {children}
+          </div>
         </main>
       </div>
     </div>

@@ -1,42 +1,70 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getClientServices } from '@/application';
 import { useApp } from '@/contexts/AppContext';
-import { showErrorAlert } from '@/lib/error-handler';
 
-type InputMethod = 'text' | 'file' | 'url' | 'template';
+interface SpeechRecognition extends EventTarget {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start: () => void;
+  stop: () => void;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onerror: (event: Event) => void;
+  onend: () => void;
+}
+
+interface SpeechRecognitionEvent {
+  resultIndex: number;
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionResultList {
+  length: number;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  isFinal: boolean;
+  length: number;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+type InputMethod = 'text' | 'file' | 'voice' | 'url' | 'template';
 
 interface DurationConfig {
   seconds: number;
+  label: string;
+  subLabel: string;
+  range: string;
   minWords: number;
   maxWords: number;
   recommendedWords: number;
 }
 
 const durationConfigs: DurationConfig[] = [
-  { seconds: 5, minWords: 35, maxWords: 50, recommendedWords: 42 },
-  { seconds: 10, minWords: 70, maxWords: 100, recommendedWords: 89 },
-  { seconds: 12, minWords: 84, maxWords: 120, recommendedWords: 107 },
+  { seconds: 5, label: '5s', subLabel: '5秒分镜', range: '35-50', minWords: 35, maxWords: 50, recommendedWords: 42 },
+  { seconds: 10, label: '10s', subLabel: '10秒分镜', range: '70-100', minWords: 70, maxWords: 100, recommendedWords: 89 },
+  { seconds: 12, label: '12s', subLabel: '12秒分镜', range: '84-120', minWords: 84, maxWords: 120, recommendedWords: 107 },
 ];
 
-const templates = {
-  zh: [
-    { id: 'beauty', name: '护肤品广告', content: '每天坚持使用，肌肤焕发自然光彩。温和配方，深层滋养，让美丽从内而外绽放。选择我们，选择自信与美丽。' },
-    { id: 'food', name: '美食广告', content: '新鲜食材，用心烹饪，每一口都是家的味道。传统工艺，现代口感，让味蕾记住这一刻的美好。' },
-    { id: 'tech', name: '科技产品', content: '创新科技，改变生活。智能设计，便捷操作，让每一天都充满可能。未来已来，你准备好了吗？' },
-  ],
-  en: [
-    { id: 'beauty', name: 'Beauty Product', content: 'A gentle formula brings visible glow, balanced hydration, and a more confident daily routine.' },
-    { id: 'food', name: 'Food Campaign', content: 'Fresh ingredients, careful cooking, and memorable taste create a warm story worth sharing.' },
-    { id: 'tech', name: 'Tech Product', content: 'Smart design makes everyday work simpler, faster, and more reliable from the first interaction.' },
-  ],
-};
+const templates = [
+  { id: 'beauty', name: '护肤品广告', content: '每天坚持使用，肌肤焕发自然光彩。温和配方，深层滋养，让美丽从内而外绽放。选择我们，选择自信与美丽。' },
+  { id: 'food', name: '美食广告', content: '新鲜食材，用心烹饪，每一口都是家的味道。传统工艺，现代口感，让味蕾记住这一刻的美好。' },
+  { id: 'tech', name: '科技产品', content: '创新科技，改变生活。智能设计，便捷操作，让每一天都充满可能。未来已来，你准备好了吗？' },
+  { id: 'edu', name: '教育培训', content: '专业师资，科学方法，让学习成为乐趣。个性化教学，因材施教，每个孩子都是独特的未来之星。' },
+];
 
 export default function SmartCreatePage() {
   const router = useRouter();
-  const { language, t, settings } = useApp();
+  const { settings } = useApp();
   const { storyboardService, sessionService } = getClientServices();
   const [inputMethod, setInputMethod] = useState<InputMethod>('text');
   const [script, setScript] = useState('');
@@ -45,22 +73,19 @@ export default function SmartCreatePage() {
   const [urlInput, setUrlInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [polishing, setPolishing] = useState(false);
+  const [recording, setRecording] = useState(false);
+
+  const recognitionRef = useRef<SpeechRecognition | null>(null) as React.MutableRefObject<SpeechRecognition | null>;
 
   const currentConfig = useMemo(
-    () => durationConfigs.find((config) => config.seconds === selectedDuration) || durationConfigs[0],
+    () => durationConfigs.find((c) => c.seconds === selectedDuration) || durationConfigs[0],
     [selectedDuration],
   );
 
-  const currentTemplates = templates[language];
   const isInputValid = script.trim().length > 0 && script.length <= 3000;
 
-  const handleGenerate = async () => {
-    if (!isInputValid) {
-      alert(script.trim() ? t.longScriptError : t.emptyScriptError);
-      return;
-    }
-
+  const handleGenerate = useCallback(async () => {
+    if (!isInputValid) return;
     setLoading(true);
     try {
       const draft = await storyboardService.splitScenes({
@@ -68,246 +93,277 @@ export default function SmartCreatePage() {
         duration: selectedDuration,
         wordCount,
       });
-
-      await sessionService.saveAutoSession({
-        ...draft,
-        wordCount,
-      });
-
+      await sessionService.saveAutoSession({ ...draft, wordCount });
       router.push('/result');
-    } catch (error) {
-      showErrorAlert(error, language === 'zh' ? '分镜生成失败' : 'Storyboard generation failed');
+    } catch {
+      alert('分镜生成失败，请稍后重试');
     } finally {
       setLoading(false);
     }
-  };
+  }, [isInputValid, script, selectedDuration, wordCount, storyboardService, sessionService, router]);
 
-  const handleImportUrl = async () => {
+  const handleImportUrl = useCallback(async () => {
     if (!urlInput.trim()) {
-      alert(language === 'zh' ? '请输入有效的 URL' : 'Please enter a valid URL');
+      alert('请输入有效的 URL');
       return;
     }
-
     setImporting(true);
     try {
       const content = await storyboardService.importFromUrl({ url: urlInput });
       setScript(content.slice(0, 3000));
       setInputMethod('text');
-    } catch (error) {
-      showErrorAlert(error, language === 'zh' ? '链接导入失败' : 'Import failed');
+    } catch {
+      alert('链接导入失败');
     } finally {
       setImporting(false);
     }
-  };
+  }, [urlInput, storyboardService]);
 
-  const handlePolish = async () => {
-    if (!script.trim()) {
-      alert(language === 'zh' ? '请先输入文案' : 'Please enter script first');
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      alert('文件过大，请选择小于10MB的文件');
       return;
     }
-
-    setPolishing(true);
     try {
-      const polished = await storyboardService.polishScript({
-        script,
-        targetLength: currentConfig.recommendedWords * 3,
-      });
-      setScript(polished.slice(0, 3000));
-    } catch (error) {
-      showErrorAlert(error, language === 'zh' ? '文案润色失败' : 'Script polishing failed');
-    } finally {
-      setPolishing(false);
+      const text = await file.text();
+      setScript(text.slice(0, 3000));
+      setInputMethod('text');
+    } catch {
+      alert('文件读取失败');
     }
-  };
+  }, []);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
+  const handleStartRecording = useCallback(() => {
+    const w = window as unknown as Record<string, unknown>;
+    const SpeechRecognitionAPI = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) {
+      alert('您的浏览器不支持语音输入，请使用Chrome或Edge浏览器');
       return;
     }
+    if (recording) {
+      recognitionRef.current?.stop();
+      setRecording(false);
+      return;
+    }
+    const recognition = new (SpeechRecognitionAPI as new () => SpeechRecognition)();
+    recognition.lang = 'zh-CN';
+    recognition.continuous = true;
+    recognition.interimResults = true;
 
-    const text = await file.text();
-    setScript(text.slice(0, 3000));
-    setInputMethod('text');
-  };
+    recognition.onresult = (event) => {
+      let transcript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      setScript((prev) => (prev + transcript).slice(0, 3000));
+    };
+
+    recognition.onerror = () => {
+      setRecording(false);
+      alert('语音识别出错，请重试');
+    };
+
+    recognition.onend = () => {
+      setRecording(false);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setRecording(true);
+  }, [recording]);
+
+  if (!settings) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center text-sm text-gray-400">
+        加载配置中...
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <section className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-800 dark:bg-black">
-        <h1 className="text-3xl font-semibold text-gray-900 dark:text-white">
-          {language === 'zh' ? 'FatMug 智能分镜' : 'FatMug Smart Storyboard'}
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600 dark:text-gray-400">
-          {language === 'zh'
-            ? `当前运行模式为 ${settings?.dataMode || 'mock'}。你可以演示输入、拆分、生成提示词、生成图片和结果保存；文本/图片生成仍为 mock，会话与配置可按模式切到真实持久化。`
-            : `Current mode is ${settings?.dataMode || 'mock'}. You can demo input, splitting, prompt generation, image generation, and persistence; text/image generation stays mock while session/settings can switch to real persistence.`}
-        </p>
-      </section>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-[28px] font-bold text-gray-900">FatMug 智能分镜</h1>
+        <p className="mt-1 text-sm text-gray-500">输入广告对白，智能生成分镜脚本</p>
+      </div>
 
-      <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-black">
-        <div className="flex flex-wrap gap-2">
-          {([
-            ['text', language === 'zh' ? '手动输入' : 'Text'],
-            ['file', language === 'zh' ? '文件导入' : 'File'],
-            ['url', language === 'zh' ? '链接导入' : 'URL'],
-            ['template', language === 'zh' ? '预设模板' : 'Templates'],
-          ] as const).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setInputMethod(id)}
-              className={`rounded-full px-4 py-2 text-sm transition ${
-                inputMethod === id
-                  ? 'bg-black text-white dark:bg-white dark:text-black'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-6 space-y-4">
-          {inputMethod === 'text' && (
-            <textarea
-              value={script}
-              onChange={(event) => setScript(event.target.value.slice(0, 3000))}
-              rows={8}
-              placeholder={t.scriptPlaceholder}
-              className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-            />
-          )}
-
-          {inputMethod === 'file' && (
-            <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-gray-300 px-6 py-12 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-              <span>{language === 'zh' ? '上传 txt 文件' : 'Upload a txt file'}</span>
-              <span className="mt-2 text-xs">{language === 'zh' ? '内容将直接填入文案框' : 'Content will be copied into the script field'}</span>
-              <input type="file" accept=".txt,text/plain" onChange={handleFileUpload} className="hidden" />
-            </label>
-          )}
-
-          {inputMethod === 'url' && (
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <input
-                value={urlInput}
-                onChange={(event) => setUrlInput(event.target.value)}
-                placeholder="https://example.com/story"
-                className="flex-1 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-              />
-              <button
-                type="button"
-                onClick={handleImportUrl}
-                disabled={importing}
-                className="rounded-2xl bg-black px-5 py-3 text-sm text-white disabled:opacity-60 dark:bg-white dark:text-black"
-              >
-                {importing ? (language === 'zh' ? '导入中...' : 'Importing...') : (language === 'zh' ? '导入链接' : 'Import')}
-              </button>
-            </div>
-          )}
-
-          {inputMethod === 'template' && (
-            <div className="grid gap-3 md:grid-cols-3">
-              {currentTemplates.map((template) => (
+      <div className="bg-white border border-gray-200 rounded-[8px] p-6 shadow-sm">
+        <div className="space-y-6">
+          <section>
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">选择分镜时长</h2>
+            <div className="grid grid-cols-3 gap-3">
+              {durationConfigs.map((config) => (
                 <button
-                  key={template.id}
+                  key={config.seconds}
                   type="button"
                   onClick={() => {
-                    setScript(template.content);
-                    setInputMethod('text');
+                    setSelectedDuration(config.seconds);
+                    setWordCount(config.recommendedWords);
                   }}
-                  className="rounded-2xl border border-gray-200 p-4 text-left transition hover:border-gray-400 dark:border-gray-700 dark:hover:border-gray-500"
+                  className={`h-[78px] rounded-[6px] border text-center flex flex-col items-center justify-center transition-colors ${
+                    selectedDuration === config.seconds
+                      ? 'border-gray-900 bg-white'
+                      : 'border-gray-300 bg-white hover:border-gray-400'
+                  }`}
                 >
-                  <div className="font-medium text-gray-900 dark:text-white">{template.name}</div>
-                  <div className="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-400">{template.content}</div>
+                  <span className="text-2xl font-bold text-gray-900">{config.label}</span>
+                  <span className="text-xs text-gray-400 mt-0.5">{config.subLabel}</span>
                 </button>
               ))}
             </div>
-          )}
-        </div>
-      </section>
+          </section>
 
-      <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-black">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t.selectDuration}</h2>
-            <button
-              type="button"
-              onClick={handlePolish}
-              disabled={polishing}
-              className="rounded-full border border-gray-300 px-4 py-2 text-sm text-gray-700 disabled:opacity-60 dark:border-gray-700 dark:text-gray-200"
-            >
-              {polishing ? (language === 'zh' ? '润色中...' : 'Polishing...') : t.aiPolishing}
-            </button>
-          </div>
-
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            {durationConfigs.map((config) => (
-              <button
-                key={config.seconds}
-                type="button"
-                onClick={() => {
-                  setSelectedDuration(config.seconds);
-                  setWordCount(config.recommendedWords);
-                }}
-                className={`rounded-2xl border p-4 text-left transition ${
-                  selectedDuration === config.seconds
-                    ? 'border-black bg-gray-50 dark:border-white dark:bg-gray-900'
-                    : 'border-gray-200 hover:border-gray-400 dark:border-gray-800 dark:hover:border-gray-700'
-                }`}
-              >
-                <div className="text-xl font-semibold text-gray-900 dark:text-white">{config.seconds}s</div>
-                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {language === 'zh' ? `${config.minWords}-${config.maxWords} 字/镜` : `${config.minWords}-${config.maxWords} chars/scene`}
-                </div>
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-6">
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{t.wordCountPerScene}</label>
+          <section>
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-sm font-semibold text-gray-900">镜头文案密度</h2>
+              <span className="text-xs text-gray-400">字数范围：{currentConfig.range}</span>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">系统会根据分镜时长自动建议每个镜头的旁白字数范围。</p>
             <input
               type="range"
               min={currentConfig.minWords}
               max={currentConfig.maxWords}
               value={wordCount}
-              onChange={(event) => setWordCount(Number(event.target.value))}
-              className="w-full"
+              onChange={(e) => setWordCount(Number(e.target.value))}
+              className="w-full accent-gray-900"
             />
-            <div className="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400">
-              <span>{language === 'zh' ? `最少 ${currentConfig.minWords}` : `Min ${currentConfig.minWords}`}</span>
-              <span>{language === 'zh' ? `当前 ${wordCount}` : `Current ${wordCount}`}</span>
-              <span>{language === 'zh' ? `最多 ${currentConfig.maxWords}` : `Max ${currentConfig.maxWords}`}</span>
+            <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <span>{currentConfig.minWords}</span>
+              <span className="text-gray-700 font-medium">{wordCount}</span>
+              <span>{currentConfig.maxWords}</span>
             </div>
-          </div>
-        </div>
+          </section>
 
-        <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-black">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{language === 'zh' ? '演示摘要' : 'Demo Summary'}</h2>
-          <dl className="mt-4 space-y-4 text-sm">
-            <div className="flex items-center justify-between">
-              <dt className="text-gray-500 dark:text-gray-400">{language === 'zh' ? '数据模式' : 'Data Mode'}</dt>
-              <dd className="rounded-full bg-gray-100 px-3 py-1 text-gray-800 dark:bg-gray-900 dark:text-gray-200">{settings?.dataMode || 'mock'}</dd>
+          <section>
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">选择输入方式</h2>
+            <div className="flex flex-wrap gap-2">
+              {([
+                { id: 'text' as const, label: '手动输入' },
+                { id: 'file' as const, label: '文件上传' },
+                { id: 'voice' as const, label: '语音输入' },
+                { id: 'url' as const, label: '链接导入' },
+                { id: 'template' as const, label: '预设模板' },
+              ]).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setInputMethod(tab.id)}
+                  className={`rounded-[9999px] h-[38px] px-4 text-sm transition-colors ${
+                    inputMethod === tab.id
+                      ? 'bg-gray-900 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-gray-500 dark:text-gray-400">{language === 'zh' ? '当前字数' : 'Characters'}</dt>
-              <dd className="font-medium text-gray-900 dark:text-white">{script.length}</dd>
+
+            <div className="mt-4">
+              {inputMethod === 'text' && (
+                <div>
+                  <textarea
+                    value={script}
+                    onChange={(e) => setScript(e.target.value.slice(0, 3000))}
+                    placeholder="请输入广告对白"
+                    className="w-full h-[110px] border border-gray-300 rounded-[6px] p-3 text-sm text-gray-900 placeholder:text-gray-400 resize-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                  />
+                  <div className="text-xs text-gray-400 mt-1 text-right">{script.length}/3000</div>
+                </div>
+              )}
+
+              {inputMethod === 'file' && (
+                <div className="border-2 border-dashed border-gray-300 rounded-[6px] p-6 text-center">
+                  <label className="cursor-pointer flex flex-col items-center gap-2">
+                    <span className="text-sm text-gray-500">选择文件</span>
+                    <span className="text-xs text-gray-400">未选择任何文件</span>
+                    <input type="file" accept=".txt,text/plain" onChange={handleFileUpload} className="hidden" />
+                  </label>
+                  <p className="text-xs text-gray-400 mt-2">支持 .txt 格式，最大 10MB</p>
+                </div>
+              )}
+
+              {inputMethod === 'voice' && (
+                <div className="flex flex-col items-center gap-4 py-4">
+                  <button
+                    type="button"
+                    onClick={handleStartRecording}
+                    className={`w-[280px] h-11 rounded-[6px] text-sm font-medium transition-colors ${
+                      recording
+                        ? 'bg-red-600 text-white'
+                        : 'bg-gray-900 text-white hover:bg-gray-800'
+                    }`}
+                  >
+                    {recording ? '停止录音' : '开始录音'}
+                  </button>
+                  <p className="text-xs text-gray-400">建议使用Chrome或Edge浏览器以获得最佳体验</p>
+                </div>
+              )}
+
+              {inputMethod === 'url' && (
+                <div className="space-y-3">
+                  <input
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    placeholder="请输入网页链接…"
+                    className="w-full h-11 border border-gray-300 rounded-[6px] px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleImportUrl}
+                    disabled={importing}
+                    className="h-10 w-[86px] rounded-[6px] bg-gray-300 text-white text-sm disabled:opacity-50 hover:bg-gray-400 transition-colors"
+                  >
+                    {importing ? '导入中...' : '提取内容'}
+                  </button>
+                </div>
+              )}
+
+              {inputMethod === 'template' && (
+                <div className="grid grid-cols-2 gap-3">
+                  {templates.map((template) => (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => { setScript(template.content); setInputMethod('text'); }}
+                      className="border border-gray-200 rounded-[6px] p-4 text-left hover:border-gray-400 transition-colors"
+                    >
+                      <div className="font-semibold text-sm text-gray-900">{template.name}</div>
+                      <div className="mt-1 text-xs text-gray-600 leading-relaxed line-clamp-3">
+                        {template.content}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-gray-500 dark:text-gray-400">{language === 'zh' ? '时长' : 'Duration'}</dt>
-              <dd className="font-medium text-gray-900 dark:text-white">{selectedDuration}s</dd>
-            </div>
-          </dl>
+          </section>
 
           <button
             type="button"
             onClick={handleGenerate}
             disabled={loading || !isInputValid}
-            className="mt-8 w-full rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-black"
+            className={`w-full h-11 rounded-[6px] text-sm font-medium transition-colors ${
+              loading || !isInputValid
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-gray-900 text-white hover:bg-gray-800'
+            }`}
           >
-            {loading ? t.generating : t.generateBtn}
+            {loading ? '生成中...' : '生成分镜'}
           </button>
         </div>
-      </section>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-[8px] p-4 shadow-sm">
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">使用提示</h3>
+        <ul className="space-y-1 text-xs text-gray-500">
+          <li>建议输入完整的广告文案，包含产品特点和使用场景</li>
+          <li>根据广告时长选择合适的分镜时长</li>
+          <li>生成的分镜可以后续调整和优化</li>
+        </ul>
+      </div>
     </div>
   );
 }

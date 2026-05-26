@@ -7,16 +7,20 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    // 重定向到智能生成分镜页面
-    router.replace('/smart-create');
+    const t = setTimeout(() => router.replace('/smart-create'), 800);
+    return () => clearTimeout(t);
   }, [router]);
 
-  // 显示加载状态
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-600 dark:text-gray-400">FatMug 正在跳转...</p>
+    <div className="h-screen flex items-center justify-center bg-white">
+      <div className="text-center space-y-6">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">FatMug</h1>
+        <div className="flex justify-center">
+          <div className="h-1 w-48 rounded-full bg-gray-200 overflow-hidden">
+            <div className="h-full w-12 rounded-full bg-gray-900 animate-pulse" />
+          </div>
+        </div>
+        <p className="text-sm text-gray-400">Loading</p>
       </div>
     </div>
   );
