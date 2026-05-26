@@ -1,6 +1,8 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { getClientServices } from '@/application';
+import type { AppSettings } from '@/domain/storyboard';
 
 // 语言类型定义
 type Language = 'zh' | 'en';
@@ -344,6 +346,8 @@ interface AppContextType {
   theme: Theme;
   setLanguage: (lang: Language) => void;
   setTheme: (theme: Theme) => void;
+  settings: AppSettings | null;
+  updateSettings: (patch: Partial<AppSettings>) => Promise<void>;
   t: typeof translations.zh | typeof translations.en;
 }
 
@@ -356,78 +360,47 @@ interface AppProviderProps {
 }
 
 export function AppProvider({ children }: AppProviderProps) {
-  // 从localStorage读取用户偏好设置，默认中文和浅色主题
   const [language, setLanguageState] = useState<Language>('zh');
   const [theme, setThemeState] = useState<Theme>('light');
-  const [isClient, setIsClient] = useState(false);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const { settingsService } = getClientServices();
 
-  // 标记客户端渲染
   useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // 客户端初始化时读取localStorage
-  useEffect(() => {
-    if (!isClient) return;
-    
-    const savedLanguage = localStorage.getItem('ad-script-language') as Language;
-    const savedTheme = localStorage.getItem('ad-script-theme') as Theme;
-    
-    if (savedLanguage && (savedLanguage === 'zh' || savedLanguage === 'en')) {
-      setLanguageState(savedLanguage);
-    }
-    
-    // 应用保存的主题到DOM
-    const finalTheme = savedTheme || 'light';
-    setThemeState(finalTheme);
-    
-    if (typeof document !== 'undefined') {
-      const root = document.documentElement;
-      if (finalTheme === 'dark') {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-    }
-    
-    // 启动数据清理服务（通过API通知服务端）
-    fetch('/api/database/cleanup', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ action: 'start' })
-    }).catch((error) => {
-      console.error('启动数据清理服务失败:', error);
+    settingsService.getSettings().then((loaded) => {
+      setSettings(loaded);
+      setLanguageState(loaded.language);
+      setThemeState(loaded.theme);
     });
-  }, [isClient]);
+  }, [settingsService]);
 
-  // 设置语言并保存到localStorage
-  const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    localStorage.setItem('ad-script-language', lang);
-  };
-
-  // 设置主题并保存到localStorage
-  const setTheme = (newTheme: Theme) => {
-    console.log('Setting theme to:', newTheme);
-    setThemeState(newTheme);
-    localStorage.setItem('ad-script-theme', newTheme);
-    
-    // 更新HTML元素的class来触发主题变化
-    if (typeof document !== 'undefined') {
-      const root = document.documentElement;
-      console.log('Current root classes before:', root.className);
-      if (newTheme === 'dark') {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-      console.log('Current root classes after:', root.className);
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
     }
+
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [theme]);
+
+  const updateSettings = async (patch: Partial<AppSettings>) => {
+    const next = await settingsService.updateSettings(patch);
+    setSettings(next);
+    setLanguageState(next.language);
+    setThemeState(next.theme);
   };
 
-  // 获取当前语言的翻译
+  const setLanguage = (lang: Language) => {
+    void updateSettings({ language: lang });
+  };
+
+  const setTheme = (newTheme: Theme) => {
+    void updateSettings({ theme: newTheme });
+  };
+
   const t = translations[language];
 
   const value = {
@@ -435,6 +408,8 @@ export function AppProvider({ children }: AppProviderProps) {
     theme,
     setLanguage,
     setTheme,
+    settings,
+    updateSettings,
     t
   };
 

@@ -1,43 +1,14 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 function ImageViewerContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [imageUrl, setImageUrl] = useState<string>('');
-  const [imageName, setImageName] = useState<string>('');
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-
-    // 从URL参数中获取图片数据
-    const imageParam = searchParams.get('image');
-    const nameParam = searchParams.get('name') || 'image.jpg';
-
-    if (imageParam) {
-      try {
-        // 如果是base64数据，直接使用
-        if (imageParam.startsWith('data:image/')) {
-          setImageUrl(imageParam);
-        } else {
-          // 如果是其他格式，尝试解析
-          setImageUrl(decodeURIComponent(imageParam));
-        }
-      } catch (error) {
-        console.error('解析图片数据失败:', error);
-        alert('图片数据格式错误');
-        router.back();
-      }
-    } else {
-      alert('未找到图片数据');
-      router.back();
-    }
-
-    setImageName(nameParam);
-  }, [searchParams, router]);
+  const imageParam = searchParams.get('image');
+  const imageName = searchParams.get('name') || 'image.jpg';
+  const imageUrl = imageParam ? decodeURIComponent(imageParam) : '';
 
   // 下载图片功能
   const downloadImage = () => {
@@ -54,10 +25,19 @@ function ImageViewerContent() {
     }
   };
 
-  if (!mounted || !imageUrl) {
+  if (!imageUrl) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
-        <div className="text-gray-600 dark:text-gray-400">加载中...</div>
+        <div className="space-y-3 text-center">
+          <div className="text-gray-600 dark:text-gray-400">未找到图片数据</div>
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="rounded-full border border-gray-300 px-4 py-2 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-200"
+          >
+            返回
+          </button>
+        </div>
       </div>
     );
   }
@@ -92,6 +72,7 @@ function ImageViewerContent() {
       {/* 图片显示区域 */}
       <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
         <div className="max-w-full max-h-full">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={imageUrl}
             alt={imageName}

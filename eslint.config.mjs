@@ -12,6 +12,13 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 遗留区（已从主链路移除，第二阶段再决定去留）
+    "src/app/_api/**",
+    "src/storage/**",
+    "src/lib/llm-client.ts",
+    "src/lib/mock-data.ts",
+    "src/lib/model-config.ts",
+    "src/utils/imageProcessor.ts",
   ]),
 ]);
 

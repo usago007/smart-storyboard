@@ -8,21 +8,27 @@ export interface ErrorInfo {
   requestId?: string;
 }
 
+type AppError = unknown;
+
+function isErrorInfo(error: unknown): error is ErrorInfo {
+  return typeof error === 'object' && error !== null;
+}
+
 /**
  * 检查是否是内容安全检测错误
  */
-export function isContentSafetyError(error: any): boolean {
+export function isContentSafetyError(error: AppError): boolean {
   if (typeof error === 'string') {
     return error.includes('InputTextSensitiveContentDetected') ||
            error.includes('sensitive information') ||
            error.includes('敏感内容');
   }
   
-  if (error?.code === 'InputTextSensitiveContentDetected') {
+  if (isErrorInfo(error) && error.code === 'InputTextSensitiveContentDetected') {
     return true;
   }
   
-  if (error?.message?.includes('sensitive information')) {
+  if (isErrorInfo(error) && error.message?.includes('sensitive information')) {
     return true;
   }
   
@@ -32,12 +38,12 @@ export function isContentSafetyError(error: any): boolean {
 /**
  * 获取友好的错误提示信息
  */
-export function getFriendlyErrorMessage(error: any): string {
+export function getFriendlyErrorMessage(error: AppError): string {
   if (isContentSafetyError(error)) {
     return '检测到输入内容可能包含敏感信息，请修改对白内容后重试。\n\n建议：\n• 避免使用激烈或争议性表述\n• 简化对白内容\n• 检查是否有容易被误判的词汇';
   }
   
-  if (error?.message) {
+  if (isErrorInfo(error) && error.message) {
     return error.message;
   }
   
@@ -51,7 +57,7 @@ export function getFriendlyErrorMessage(error: any): string {
 /**
  * 显示错误提示
  */
-export function showErrorAlert(error: any, context: string = '') {
+export function showErrorAlert(error: AppError, context: string = '') {
   const message = getFriendlyErrorMessage(error);
   const fullMessage = context ? `${context}\n\n${message}` : message;
   alert(fullMessage);
@@ -60,7 +66,7 @@ export function showErrorAlert(error: any, context: string = '') {
 /**
  * 解析API响应中的错误信息
  */
-export function parseApiError(response: Response): Promise<any> {
+export function parseApiError(response: Response): Promise<ErrorInfo> {
   return response.json().catch(() => {
     return { 
       code: 'UNKNOWN_ERROR', 
@@ -72,6 +78,10 @@ export function parseApiError(response: Response): Promise<any> {
 /**
  * 获取请求ID（如果有）
  */
-export function getRequestId(error: any): string | undefined {
-  return error?.requestId || error?.message?.match(/Request id: ([\w]+)/)?.[1];
+export function getRequestId(error: AppError): string | undefined {
+  if (!isErrorInfo(error)) {
+    return undefined;
+  }
+
+  return error.requestId || error.message?.match(/Request id: ([\w]+)/)?.[1];
 }

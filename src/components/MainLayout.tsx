@@ -12,7 +12,7 @@ interface NavItem {
 }
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { t, language } = useApp();
+  const { language, theme, setTheme } = useApp();
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -64,33 +64,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // 清空历史用户数据
-  useEffect(() => {
-    const clearHistoryData = () => {
-      try {
-        // 清空sessionStorage中的所有相关数据
-        sessionStorage.removeItem('adScriptData');
-        sessionStorage.removeItem('manualCreateData');
-        sessionStorage.removeItem('splitterResult');
-        sessionStorage.removeItem('ad_script_session');
-        
-        // 清空localStorage中的设置数据（可选，根据需求决定是否保留）
-        // localStorage.removeItem('adToolSettings');
-        
-        console.log('历史用户数据已清空');
-      } catch (error) {
-        console.error('清空历史数据失败:', error);
-      }
-    };
-
-    // 仅在首次加载时清空
-    const hasCleared = sessionStorage.getItem('historyCleared');
-    if (!hasCleared) {
-      clearHistoryData();
-      sessionStorage.setItem('historyCleared', 'true');
-    }
   }, []);
 
   // 当前激活的导航项
@@ -190,12 +163,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
           {/* 右侧工具栏 */}
           <div className="flex items-center space-x-4">
-            {/* 主题切换 */}
             <button
-              onClick={() => {/* 主题切换逻辑 */}}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-900"
             >
-              {/* 主题图标 */}
+              {theme === 'dark'
+                ? language === 'zh' ? '浅色' : 'Light'
+                : language === 'zh' ? '深色' : 'Dark'}
             </button>
           </div>
         </header>

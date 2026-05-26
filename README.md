@@ -1,27 +1,8 @@
-# AI Smart Storyboard System
+# FatMug — Smart Storyboard
 
-> AI-powered storyboard generation system with local demo mode - zero configuration required for local presentations.
-
-## Features
-
-- **Demo Mode**: Run locally without database or AI services - perfect for demos
-- **Smart Generation**: AI-powered shot prompts and image generation
-- **Manual Creation**: Hand-craft storyboards with full control
-- **Black & White Sketch Style**: Auto-convert images to pencil sketch style
-- **Session Management**: Automatic data cleanup with configurable retention
-
-## Tech Stack
-
-- **Frontend**: Next.js 16 (App Router) + React + TypeScript + Tailwind CSS
-- **Backend**: Next.js API Routes
-- **Database**: PostgreSQL (via Drizzle ORM) - optional for demo mode
-- **AI Integration**: Coze Coding Dev SDK
+AI-powered storyboard generator with a pure frontend mock mode — zero backend required for local demo.
 
 ## Quick Start
-
-### DEMO Mode (Recommended for Local Demo)
-
-No database or API keys required. All data is stored in memory.
 
 ```bash
 cd ad-script-splitter
@@ -29,67 +10,88 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000).
 
-### Production Mode
+## Features
 
-1. Copy and configure environment variables:
-```bash
-cp .env.example .env.local
-```
+- **Mock Mode (default)** — Runs entirely in the browser. No database, API keys, or external services.
+- **Smart Scene Splitting** — Split ad scripts into scenes by duration and word count.
+- **AI Prompt Generation** — Auto-generate shot prompts, first/last frame descriptions.
+- **Image Placeholders** — Generate black-and-white storyboard images (demo mock).
+- **Batch Operations** — Generate prompts, frames, and images for all scenes at once.
+- **Manual Creation** — Hand-craft storyboards with full edit control.
+- **Session Persistence** — Auto-save and restore sessions across page refreshes.
+- **Theme & Language** — Light/dark theme, Chinese/English UI.
+- **Remote Backend (Phase 2)** — Optional SQLite-backed BFF for real session & settings persistence.
 
-2. Set up PostgreSQL database and configure `.env.local`:
-```env
-PGDATABASE_URL=postgresql://user:password@localhost:5432/storyboard_db
-COZE_WORKLOAD_IDENTITY_API_KEY=your-api-key
-```
+## Tech Stack
 
-3. Start the development server:
-```bash
-npm run dev
-```
+- **Frontend**: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4
+- **Backend (optional)**: Next.js API Routes, SQLite via Drizzle ORM
+- **Testing**: Vitest
+- **Legacy (archived)**: PostgreSQL, S3, Coze AI, Sharp image processing
+
+## Commands
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start dev server on :3000 |
+| `npm run build` | Production build |
+| `npm run start` | Start production server |
+| `npm run lint` | Run ESLint |
+| `npm test` | Run all tests |
+| `npm run test:watch` | Tests in watch mode |
+| `npx tsc --noEmit` | Type checking |
 
 ## Environment Variables
 
-See [`.env.example`](.env.example) for all available options.
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DEMO_MODE` | No | Set to `true` to enable demo mode (no database/AI needed) |
-| `PGDATABASE_URL` | Yes (production) | PostgreSQL connection string |
-| `COZE_WORKLOAD_IDENTITY_API_KEY` | Yes (production) | Coze API key |
-
-## Project Structure
-
-```
-ad-script-splitter/
-├── src/
-│   ├── app/              # Next.js App Router pages and API routes
-│   ├── components/       # React components
-│   ├── contexts/         # React context providers
-│   ├── hooks/            # Custom React hooks
-│   ├── lib/              # Utility libraries and mock data
-│   └── storage/          # Database schema and managers
-├── public/               # Static assets
-├── .env.example          # Environment variable template
-└── package.json
+```bash
+# .env.local (optional)
+NEXT_PUBLIC_DATA_MODE=mock          # mock | remote (default: mock)
+SQLITE_DB_PATH=./data/storyboard.db # Only used in remote mode
 ```
 
-## Available Scripts
+### Mock Mode (`NEXT_PUBLIC_DATA_MODE=mock`)
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Build for production |
-| `npm run start` | Start production server |
-| `npm run lint` | Run ESLint |
+No backend needed. All data is stored in `localStorage` (settings) and `sessionStorage` (scenes).
+- Session survives page refresh within the same tab.
+- All AI generation returns mock data with configurable latency and failure rate.
 
-## Notes
+### Remote Mode (`NEXT_PUBLIC_DATA_MODE=remote`)
 
-- DEMO mode stores data in memory - data is lost on page refresh
-- Image generation in DEMO mode returns placeholder images
-- AI responses in DEMO mode are simulated with mock data
+Requires running dev server (BFF routes serve SQLite-backed persistence).
+- Session and settings are persisted to SQLite via API routes.
+- AI generation (prompts, frames, images) remains mock.
+- See `src/infrastructure/remote/` for implementation.
+
+## Architecture
+
+```
+src/
+├── app/                  # Next.js pages (presentation)
+│   ├── (with-nav)/       # Pages with sidebar navigation
+│   ├── api/              # BFF routes (session, settings)
+│   └── _api/             # LEGACY — old Coze/DB routes (archived)
+├── application/          # Service layer (StoryboardService, SessionService, etc.)
+├── domain/               # Types, entities, converters
+├── infrastructure/
+│   ├── mock/             # Mock data sources (fixtures, generators, repositories)
+│   ├── remote/           # SQLite-backed repositories + HTTP client repositories
+│   └── repository-interfaces.ts
+├── shared/               # Browser storage, runtime config
+├── contexts/             # React context (language, theme, settings)
+├── storage/              # LEGACY — old PostgreSQL / S3 / Drizzle code
+└── lib/                  # Utilities (only error-handler.ts is active)
+```
+
+## Data Flow
+
+```
+Pages → getClientServices() → Service interfaces → Repository (mock | remote) → Storage
+```
+
+Pages never call `fetch('/api/...')` directly. All data access goes through the service layer.
 
 ## License
 
-Private - All rights reserved
+MIT
