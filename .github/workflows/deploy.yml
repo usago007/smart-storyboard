@@ -28,6 +28,7 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
+      - run: rm -rf src/app/api/
       - run: npm run build
         env:
           BUILD_EXPORT: "true"
