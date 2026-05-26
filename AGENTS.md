@@ -61,19 +61,6 @@ Set `NEXT_PUBLIC_DATA_MODE=mock` (default in `.env.example`). No PostgreSQL, Coz
 - Local `next dev` / server-mode builds can use `NEXT_PUBLIC_DATA_MODE=remote` with SQLite-backed BFF routes.
 - GitHub Pages export is mock-only because static export cannot host Next.js API routes or SQLite persistence.
 
-## Legacy zone
-
-These directories contain old Coze/DB/S3 code. They are **not imported by any current page** and are excluded from ESLint:
-
-| Directory / File | What it was |
-|---|---|
-| `src/app/_api/` | Old Next.js API routes (renamed; not registered as routes) |
-| `src/storage/` | Drizzle ORM, PostgreSQL, S3, session manager |
-| `src/lib/llm-client.ts` | LangChain LLM calls (old AI routes only) |
-| `src/lib/model-config.ts` | AI service config registry |
-| `src/lib/mock-data.ts` | Old mock types (old API routes only) |
-| `src/utils/imageProcessor.ts` | Sharp-based image post-processing |
-
 ## Future: connecting real backend
 
 1. Create `src/infrastructure/remote/` with adapters implementing the same service interfaces
