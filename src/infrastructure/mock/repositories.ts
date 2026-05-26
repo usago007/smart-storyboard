@@ -84,7 +84,7 @@ export class MockSessionRepository implements ISessionRepository {
 
   async loadSession(sessionType: SessionType): Promise<StoryboardSession | null> {
     const settings = await this.settingsRepository.getSettings();
-    await simulateLatency(settings);
+    await simulateLatency({ ...settings, mockDelayMs: Math.max(80, Math.round(settings.mockDelayMs / 4)) });
     const storage = getSessionStorage();
     const raw = storage.getItem(this.getKey(sessionType));
 

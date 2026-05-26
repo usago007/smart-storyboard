@@ -327,7 +327,7 @@ export default function ResultPage() {
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={() => router.push('/smart-create')}
+              onClick={() => router.push('/smart-create/')}
               className="flex items-center gap-1.5 rounded-[6px] border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
             >
               {language === 'zh' ? '返回' : 'Back'}

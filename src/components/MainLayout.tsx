@@ -6,7 +6,7 @@ const navItems = [
   {
     id: 'smart-create',
     label: '智能分镜',
-    path: '/smart-create',
+    path: '/smart-create/',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
@@ -20,7 +20,7 @@ const navItems = [
   {
     id: 'manual-create',
     label: '手工分镜',
-    path: '/manual-create',
+    path: '/manual-create/',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
@@ -30,7 +30,7 @@ const navItems = [
   {
     id: 'settings',
     label: '系统设置',
-    path: '/settings',
+    path: '/settings/',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
@@ -41,7 +41,7 @@ const navItems = [
 ];
 
 const pageHeaders: Record<string, { label: string; icon: React.ReactNode }> = {
-  '/smart-create': {
+  '/smart-create/': {
     label: '智能分镜',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -53,7 +53,7 @@ const pageHeaders: Record<string, { label: string; icon: React.ReactNode }> = {
       </svg>
     ),
   },
-  '/manual-create': {
+  '/manual-create/': {
     label: '手工分镜',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -61,7 +61,7 @@ const pageHeaders: Record<string, { label: string; icon: React.ReactNode }> = {
       </svg>
     ),
   },
-  '/settings': {
+  '/settings/': {
     label: '系统设置',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -93,8 +93,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 onClick={() => router.push(item.path)}
                 className={`w-full flex items-center gap-3 px-4 h-11 rounded-[6px] text-sm transition-colors ${
                   isActive
-                    ? 'bg-gray-100 text-gray-900 border-l-2 border-gray-900'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    ? 'bg-gray-100 text-gray-900 font-semibold border-l-2 border-gray-900'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
                 <span className={`flex-shrink-0 ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>

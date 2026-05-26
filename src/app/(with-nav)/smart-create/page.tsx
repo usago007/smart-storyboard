@@ -3,6 +3,7 @@
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { getClientServices } from '@/application';
 import { useApp } from '@/contexts/AppContext';
+import { useToast } from '@/lib/error-handler';
 import type { Scene } from '@/domain/storyboard';
 
 interface SpeechRecognition extends EventTarget {
@@ -92,6 +93,36 @@ function enrichScenes(scenes: Scene[]): Scene[] {
   }));
 }
 
+const sceneTemplatesV2 = [
+  '痛点引入',
+  '解决方案呈现',
+  '功能深度讲解',
+  '使用场景展示',
+  '用户证言',
+  '品牌号召',
+];
+
+function enrichScenesV2(scenes: Scene[]): Scene[] {
+  return scenes.map((scene) => ({
+    ...scene,
+    shotPrompt: `镜号${scene.id}：${sceneTemplatesV2[(scene.id - 1) % 6]}，以"${scene.dialogue.slice(0, 20)}..."为核心信息，镜头语言直接、节奏明快、视觉冲击力强。`,
+    firstFrame: {
+      sceneDescription: `干净背景，主体处于黄金分割位。表达核心：${scene.dialogue.slice(0, 28)}。`,
+      characterPerformance: '动作简洁有力，视线引导观众关注关键信息。',
+      cameraAngle: '近景平拍，平稳运镜，突出画面主体。',
+      lighting: '柔和漫射光，画面层次分明过渡自然。',
+      atmosphere: '清晰、直接、有说服力。',
+    },
+    lastFrame: {
+      sceneDescription: `品牌元素与产品联动呈现。重点表达：${scene.dialogue.slice(0, 28)}。`,
+      characterPerformance: '人物微表情变化传达产品体验感受。',
+      cameraAngle: '固定机位，稳定构图，预留转场空间。',
+      lighting: '主光突出，辅光补充细节轮廓。',
+      atmosphere: '专注、可信、有记忆点。',
+    },
+  }));
+}
+
 export default function SmartCreatePage() {
   const { settings } = useApp();
   const { storyboardService, sessionService } = getClientServices();
@@ -107,6 +138,8 @@ export default function SmartCreatePage() {
   const [generatedScenes, setGeneratedScenes] = useState<Scene[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [syncedIds, setSyncedIds] = useState<Set<number>>(new Set());
+  const [isRegenerated, setIsRegenerated] = useState(false);
+  const { showToast } = useToast();
 
   const recognitionRef = useRef<SpeechRecognition | null>(null) as React.MutableRefObject<SpeechRecognition | null>;
 
@@ -246,10 +279,11 @@ export default function SmartCreatePage() {
     ].join('\n');
     try {
       await navigator.clipboard.writeText(text);
+      showToast('已复制', 'success');
     } catch {
-      setErrorMessage('复制失败');
+      showToast('复制失败', 'error');
     }
-  }, []);
+  }, [showToast]);
 
   const handleSyncToManual = useCallback(async (scene: Scene) => {
     try {
@@ -276,10 +310,58 @@ export default function SmartCreatePage() {
       manualSession.updatedAt = new Date().toISOString();
       await sessionService.saveManualSession(manualSession);
       setSyncedIds((prev) => new Set([...prev, scene.id]));
+      showToast('已同步到手工分镜', 'success');
     } catch {
-      setErrorMessage('同步失败');
+      showToast('同步失败', 'error');
     }
-  }, [sessionService, selectedDuration, wordCount]);
+  }, [sessionService, selectedDuration, wordCount, showToast]);
+
+  const handleSyncAllToManual = useCallback(async () => {
+    try {
+      let manualSession = await sessionService.loadManualSession();
+      if (!manualSession) {
+        manualSession = {
+          sessionType: 'manual',
+          script: 'Manual Create',
+          duration: selectedDuration,
+          wordCount,
+          scenes: [],
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      const nextId = manualSession.scenes.length
+        ? Math.max(...manualSession.scenes.map((s) => s.id)) + 1
+        : 1;
+      const newScenes = generatedScenes.map((scene, i) => ({
+        id: nextId + i,
+        name: `分镜${nextId + i}（${selectedDuration}秒）`,
+        dialogue: scene.dialogue,
+        duration: selectedDuration,
+      }));
+      manualSession.scenes.push(...newScenes);
+      manualSession.updatedAt = new Date().toISOString();
+      await sessionService.saveManualSession(manualSession);
+      setSyncedIds(new Set(generatedScenes.map((s) => s.id)));
+      showToast('已同步全部到手工分镜', 'success');
+    } catch {
+      showToast('同步失败', 'error');
+    }
+  }, [sessionService, selectedDuration, wordCount, generatedScenes, showToast]);
+
+  const handleRegenerateAll = useCallback(() => {
+    setGeneratedScenes((prev) => enrichScenesV2(
+      prev.map(({ id, name, dialogue, duration }) => ({ id, name, dialogue, duration })),
+    ));
+    setIsRegenerated(true);
+    showToast('已重新生成结果', 'success');
+  }, [showToast]);
+
+  const handleClearResults = useCallback(() => {
+    setShowResults(false);
+    setGeneratedScenes([]);
+    setSyncedIds(new Set());
+    setIsRegenerated(false);
+  }, []);
 
   if (!settings) {
     return (
@@ -379,6 +461,18 @@ export default function SmartCreatePage() {
                     className="w-full h-[110px] border border-gray-300 rounded-[6px] p-3 text-sm text-gray-900 placeholder:text-gray-400 resize-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
                   />
                   <div className="text-xs text-gray-400 mt-1 text-right">{script.length}/3000</div>
+                  {script.length === 3000 && (
+                    <p className="text-xs text-red-600 mt-1">内容超出长度限制，请精简后再生成。</p>
+                  )}
+                  {script.length < 20 && script.length > 0 && (
+                    <p className="text-xs text-amber-600 mt-1">文案偏短，建议补充产品卖点、使用场景或转化诉求。</p>
+                  )}
+                  {script.length >= 20 && script.length < 80 && (
+                    <p className="text-xs text-gray-500 mt-1">可以生成基础分镜，建议补充更多细节以提升镜头质量。</p>
+                  )}
+                  {script.length >= 80 && script.length < 3000 && (
+                    <p className="text-xs text-gray-500 mt-1">内容较完整，适合生成多镜头脚本。</p>
+                  )}
                 </div>
               )}
 
@@ -436,7 +530,7 @@ export default function SmartCreatePage() {
                       key={template.id}
                       type="button"
                       onClick={() => { setScript(template.content); setInputMethod('text'); }}
-                      className="border border-gray-200 rounded-[6px] p-4 text-left hover:border-gray-400 transition-colors"
+                      className="border border-gray-200 rounded-[6px] p-4 text-left hover:border-gray-400 transition-colors active:scale-[0.98]"
                     >
                       <div className="font-semibold text-sm text-gray-900">{template.name}</div>
                       <div className="mt-1 text-xs text-gray-600 leading-relaxed line-clamp-3">
@@ -454,6 +548,17 @@ export default function SmartCreatePage() {
               {errorMessage}
             </div>
           )}
+
+          <div className="space-y-1">
+            <p className="text-xs text-gray-500">
+              将生成 3 个镜头，每个镜头包含画面描述、旁白、镜头提示词、首帧提示词和尾帧提示词。
+            </p>
+            <p className="text-xs text-gray-400">
+              {selectedDuration === 5 && '5s — 适合快节奏广告切片'}
+              {selectedDuration === 10 && '10s — 适合完整卖点表达'}
+              {selectedDuration === 12 && '12s — 适合情绪铺垫和产品展示'}
+            </p>
+          </div>
 
           <button
             type="button"
@@ -481,11 +586,37 @@ export default function SmartCreatePage() {
 
       {showResults && generatedScenes.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-[8px] p-6 shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-900">生成结果</h2>
-          <p className="text-xs text-gray-400 mt-0.5 mb-4">AI 已根据广告文案拆解为可编辑的镜头脚本</p>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-gray-900">
+              {isRegenerated ? '重新生成结果' : '生成结果'}
+            </h2>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleSyncAllToManual}
+                className="h-8 px-3 rounded-[6px] text-xs font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors active:scale-[0.98]"
+              >
+                同步全部到手工分镜
+              </button>
+              <button
+                type="button"
+                onClick={handleRegenerateAll}
+                className="h-8 px-3 rounded-[6px] text-xs font-medium border border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors active:scale-[0.98]"
+              >
+                重新生成
+              </button>
+              <button
+                type="button"
+                onClick={handleClearResults}
+                className="h-8 px-3 rounded-[6px] text-xs font-medium border border-gray-300 text-gray-500 hover:border-gray-400 hover:bg-gray-50 transition-colors active:scale-[0.98]"
+              >
+                清空结果
+              </button>
+            </div>
+          </div>
           <div className="space-y-4">
             {generatedScenes.map((scene) => (
-              <div key={scene.id} className="border border-gray-200 rounded-[6px] p-4">
+              <div key={scene.id} className="border border-gray-200 rounded-[6px] p-4 hover:border-gray-300 transition-colors">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-semibold text-gray-900">
                     场景 {scene.id} · {scene.duration}秒
