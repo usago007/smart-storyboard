@@ -19,10 +19,6 @@ import {
   type ScenarioType,
   type ObjectiveType,
   type StyleType,
-  CREATION_TYPES,
-  SCENARIOS,
-  OBJECTIVES,
-  STYLES,
   generateMockStoryboardBrief,
   generateAlternativeBrief,
   buildScriptFromBrief,
@@ -165,6 +161,7 @@ export default function SmartCreatePage() {
   const [syncedIds, setSyncedIds] = useState<Set<number>>(new Set());
   const [isRegenerated, setIsRegenerated] = useState(false);
   const [isDemoResult, setIsDemoResult] = useState(false);
+  const [scenesGenerated, setScenesGenerated] = useState(false);
   const [currentStep, setCurrentStep] = useState<'input' | 'brief' | 'scenes'>('input');
   const [storyboardBrief, setStoryboardBrief] = useState<StoryboardBrief | null>(null);
   const [alternativeBrief, setAlternativeBrief] = useState<StoryboardBrief | null>(null);
@@ -174,7 +171,7 @@ export default function SmartCreatePage() {
   const [selectedScenario, setSelectedScenario] = useState<ScenarioType>('douyin');
   const [selectedObjective, setSelectedObjective] = useState<ObjectiveType>('conversion');
   const [selectedStyle, setSelectedStyle] = useState<StyleType>('commercial');
-  const [showTaskConfig, setShowTaskConfig] = useState(false);
+  const [showBriefDetail, setShowBriefDetail] = useState(false);
   const { showToast } = useToast();
 
   const recognitionRef = useRef<SpeechRecognition | null>(null) as React.MutableRefObject<SpeechRecognition | null>;
@@ -241,7 +238,8 @@ export default function SmartCreatePage() {
       setSceneOutlines(outlines);
       const enriched = enrichScenes(draft.scenes);
       setGeneratedScenes(enriched);
-      setCurrentStep('scenes');
+      setScenesGenerated(true);
+      setCurrentStep('brief');
       await sessionService.saveAutoSession({ ...draft, wordCount });
     } catch {
       setErrorMessage('分镜生成失败，请稍后重试');
@@ -418,36 +416,31 @@ export default function SmartCreatePage() {
   }, [sessionService, selectedDuration, wordCount, generatedScenes, showToast, router]);
 
   const handleRegenerateAll = useCallback(() => {
-    if (sceneOutlines.length > 0) {
-      setGeneratedScenes((prev) => enrichScenesV2(
-        prev.map(({ id, name, dialogue, duration }) => ({ id, name, dialogue, duration })),
-      ));
-    } else {
-      setGeneratedScenes((prev) => enrichScenesV2(
-        prev.map(({ id, name, dialogue, duration }) => ({ id, name, dialogue, duration })),
-      ));
+    if (syncedIds.size > 0) {
+      if (!window.confirm('重新生成分镜会替换当前结果，并清空已同步状态，是否继续？')) return;
+      setSyncedIds(new Set());
     }
+    setGeneratedScenes((prev) => enrichScenesV2(
+      prev.map(({ id, name, dialogue, duration }) => ({ id, name, dialogue, duration })),
+    ));
     setIsRegenerated(true);
-    showToast('已重新生成结果', 'success');
-  }, [showToast, sceneOutlines]);
+    showToast('已重新生成分镜', 'success');
+  }, [showToast, syncedIds]);
 
   const handleClearResults = useCallback(() => {
-    setCurrentStep('input');
-    setShowResults(false);
+    if (scenesGenerated && !window.confirm('确定清空当前分镜结果吗？创意方案会保留。')) return;
+    setScenesGenerated(false);
     setGeneratedScenes([]);
     setSceneOutlines([]);
-    setStoryboardBrief(null);
-    setAlternativeBrief(null);
-    setIsAlternativeBrief(false);
     setSyncedIds(new Set());
     setIsRegenerated(false);
     setIsDemoResult(false);
-  }, []);
+  }, [scenesGenerated]);
 
   const handleLoadDemo = useCallback(() => {
     const hasExistingContent = script.trim().length > 0 || generatedScenes.length > 0;
     if (hasExistingContent) {
-      if (!window.confirm('当前已有内容，加载演示素材会覆盖当前输入和生成结果，是否继续？')) {
+      if (!window.confirm('加载演示素材会覆盖当前素材、创意方案和已生成分镜，是否继续？')) {
         return;
       }
     }
@@ -462,23 +455,15 @@ export default function SmartCreatePage() {
     setErrorMessage('');
     setSyncedIds(new Set());
     setGeneratedScenes([]);
+    setSceneOutlines([]);
+    setStoryboardBrief(null);
+    setAlternativeBrief(null);
+    setIsAlternativeBrief(false);
     setIsRegenerated(false);
     setIsDemoResult(true);
+    setScenesGenerated(false);
     setCurrentStep('input');
-    const brief = generateMockStoryboardBrief({
-      creationType: 'adCreative',
-      scenario: 'douyin',
-      objective: 'conversion',
-      style: 'commercial',
-      script: DEMO_SCRIPT,
-      duration: DEMO_DURATION,
-    });
-    const altBrief = generateAlternativeBrief(brief);
-    setStoryboardBrief(brief);
-    setAlternativeBrief(altBrief);
-    setIsAlternativeBrief(false);
-    setCurrentStep('brief');
-    showToast('已加载演示素材', 'success');
+    showToast('已填入演示素材，可修改后生成创意方案', 'success');
   }, [script, generatedScenes, showToast]);
 
   if (!settings) {
@@ -494,19 +479,22 @@ export default function SmartCreatePage() {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-base font-semibold text-gray-900">将广告文案转换为可编辑的镜头脚本</p>
-          <p className="text-[13px] text-gray-500 mt-1">输入素材后，系统会自动推荐创作参数并生成可确认的创意方案。</p>
+          <p className="text-[13px] text-gray-500 mt-1">输入素材后，系统会生成可确认的创意方案。</p>
           <div className="flex items-center gap-1.5 text-[13px] mt-2">
-            <span className={`px-2 py-0.5 rounded-full ${currentStep === 'input' ? 'bg-gray-100 text-gray-800 font-medium' : 'text-gray-400'}`}>1 任务与素材</span>
+            <span className={`px-2 py-0.5 rounded-full ${currentStep === 'input' && !scenesGenerated ? 'bg-gray-100 text-gray-800 font-medium' : 'text-gray-400'}`}>1 任务与素材</span>
             <span className="text-gray-300">→</span>
-            <span className={`px-2 py-0.5 rounded-full ${currentStep === 'brief' ? 'bg-gray-100 text-gray-800 font-medium' : 'text-gray-400'}`}>2 方案确认</span>
+            <span className={`px-2 py-0.5 rounded-full ${currentStep === 'brief' && !scenesGenerated ? 'bg-gray-100 text-gray-800 font-medium' : 'text-gray-400'}`}>2 方案确认</span>
             <span className="text-gray-300">→</span>
-            <span className={`px-2 py-0.5 rounded-full ${currentStep === 'scenes' ? 'bg-gray-100 text-gray-800 font-medium' : 'text-gray-400'}`}>3 分镜结果</span>
+            <span className={`px-2 py-0.5 rounded-full ${scenesGenerated ? 'bg-gray-100 text-gray-800 font-medium' : 'text-gray-400'}`}>3 分镜结果</span>
           </div>
         </div>
         <button
           type="button"
+          disabled={scenesGenerated || currentStep !== 'input'}
           onClick={handleLoadDemo}
-          className="text-[13px] text-gray-500 hover:text-sky-600 transition-colors whitespace-nowrap"
+          className={`text-[13px] transition-colors whitespace-nowrap ${
+            scenesGenerated || currentStep !== 'input' ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-sky-600'
+          }`}
         >
           加载演示素材
         </button>
@@ -516,7 +504,7 @@ export default function SmartCreatePage() {
       <div>
       <div className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_8px_30px_rgba(15,23,42,0.04)] p-6">
         <p className="text-sm font-semibold text-gray-900 mb-1">先输入你的素材</p>
-        <p className="text-[13px] text-gray-500 mb-3">输入广告文案、产品卖点、口播草稿、品牌介绍或创意想法。系统会自动推荐创作参数。</p>
+        <p className="text-[13px] text-gray-500 mb-3">输入广告文案、产品卖点、口播草稿、品牌介绍或创意想法，系统会先生成创意方案。</p>
         <div className="flex flex-wrap gap-1.5 mb-4">
           {([
             { id: 'text' as const, label: '手动输入' },
@@ -667,100 +655,6 @@ export default function SmartCreatePage() {
           </div>
         )}
       </div>
-
-      <div className="flex items-center justify-between mt-4">
-        <div className="flex items-center gap-2 text-[13px]">
-          <span className="text-gray-500">系统推荐：</span>
-          {script.trim().length > 0 ? (
-            <>
-              <span className="text-gray-700 font-medium">{CREATION_TYPES.find(t => t.value === selectedCreationType)?.label}</span>
-              <span className="text-gray-300">·</span>
-              <span className="text-gray-600">{SCENARIOS.find(s => s.value === selectedScenario)?.label}</span>
-              <span className="text-gray-300">·</span>
-              <span className="text-gray-600">{OBJECTIVES.find(o => o.value === selectedObjective)?.label}</span>
-              <span className="text-gray-300">·</span>
-              <span className="text-gray-600">{STYLES.find(s => s.value === selectedStyle)?.label}</span>
-            </>
-          ) : (
-            <span className="text-gray-400">输入素材后将自动推荐创作参数</span>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowTaskConfig(!showTaskConfig)}
-          className="text-[13px] text-gray-500 hover:text-gray-700 transition-colors"
-        >
-          {showTaskConfig ? '收起' : '调整'}
-        </button>
-      </div>
-
-      {showTaskConfig && (
-      <div className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_4px_20px_rgba(15,23,42,0.04)] p-5">
-        <p className="text-[13px] text-gray-500 mb-3">系统已根据素材自动推荐，也可以手动调整。</p>
-        <div className="space-y-3">
-          <div>
-            <span className="text-[13px] font-medium text-gray-700 mb-1.5 block">视频类型</span>
-            <div className="flex flex-wrap gap-2">
-              {CREATION_TYPES.map((ct) => (
-                <button
-                  key={ct.value}
-                  type="button"
-                  onClick={() => setSelectedCreationType(ct.value)}
-                  className={`px-3 py-1.5 rounded-full text-[13px] border transition-colors ${
-                    selectedCreationType === ct.value
-                      ? 'bg-gray-900 text-white border-gray-900'
-                      : 'bg-white text-gray-500 border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  {ct.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <span className="text-[13px] font-medium text-gray-700 mb-1.5 block">使用场景</span>
-              <div className="space-y-0.5">
-                {SCENARIOS.map((s) => (
-                  <button key={s.value} type="button" onClick={() => setSelectedScenario(s.value)}
-                    className={`w-full text-left px-2 py-1 rounded text-[13px] transition-colors ${
-                      selectedScenario === s.value
-                        ? 'bg-slate-100 text-gray-900 font-medium border-l-[3px] border-gray-900 rounded-l-none'
-                        : 'text-gray-600 hover:bg-slate-50 border-l-[3px] border-transparent'
-                    }`}>{s.label}</button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <span className="text-[13px] font-medium text-gray-700 mb-1.5 block">创作目标</span>
-              <div className="space-y-0.5">
-                {OBJECTIVES.map((o) => (
-                  <button key={o.value} type="button" onClick={() => setSelectedObjective(o.value)}
-                    className={`w-full text-left px-2 py-1 rounded text-[13px] transition-colors ${
-                      selectedObjective === o.value
-                        ? 'bg-slate-100 text-gray-900 font-medium border-l-[3px] border-gray-900 rounded-l-none'
-                        : 'text-gray-600 hover:bg-slate-50 border-l-[3px] border-transparent'
-                    }`}>{o.label}</button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <span className="text-[13px] font-medium text-gray-700 mb-1.5 block">表达风格</span>
-              <div className="space-y-0.5">
-                {STYLES.map((s) => (
-                  <button key={s.value} type="button" onClick={() => setSelectedStyle(s.value)}
-                    className={`w-full text-left px-2 py-1 rounded text-[13px] transition-colors ${
-                      selectedStyle === s.value
-                        ? 'bg-slate-100 text-gray-900 font-medium border-l-[3px] border-gray-900 rounded-l-none'
-                        : 'text-gray-600 hover:bg-slate-50 border-l-[3px] border-transparent'
-                    }`}>{s.label}</button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      )}
       </div>
       )}
 
@@ -768,93 +662,80 @@ export default function SmartCreatePage() {
         (() => { const active = (isAlternativeBrief && alternativeBrief) || storyboardBrief!; return (
       <>
       <div className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_8px_30px_rgba(15,23,42,0.04)] p-6">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-semibold text-gray-900">创意方案确认</p>
+        <p className="text-[15px] font-semibold text-gray-900 mb-1">创意方案确认</p>
+        <p className="text-[13px] text-gray-500 mb-5">请确认以下生成方向。确认后将在下方生成可编辑分镜。</p>
+
+        <div className="flex flex-wrap gap-2 mb-5">
+          <span className="px-2.5 py-1 rounded-full bg-slate-100 text-[12px] text-gray-600">素材识别：{getMaterialLabel(active.materialType)}</span>
+          <span className="px-2.5 py-1 rounded-full bg-slate-100 text-[12px] text-gray-600">内容类型：{active.contentType}</span>
+          <span className="px-2.5 py-1 rounded-full bg-slate-100 text-[12px] text-gray-600">建议镜头：{active.sceneCount} 镜 · {active.duration}s/镜</span>
         </div>
-        <div className="flex items-center gap-3 mb-4 text-[13px]">
-          <span className="text-gray-500">素材识别：</span>
-          <span className="px-2 py-0.5 rounded-full bg-slate-100 text-gray-700 font-medium">{getMaterialLabel(active.materialType)}</span>
-          {storyboardBrief.contentType && (
-            <>
-              <span className="text-gray-300">·</span>
-              <span className="text-gray-600">{storyboardBrief.contentType}</span>
-            </>
-          )}
-        </div>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+
+        <div className="space-y-4">
           <div>
-            <span className="text-xs text-gray-400">内容类型</span>
-            <p className="text-gray-800">{active.contentType}</p>
+            <h3 className="text-[13px] font-medium text-gray-500 mb-2">创作方向</h3>
+            <div className="space-y-3">
+              <div><span className="text-[12px] text-gray-400">创作目标</span>
+                <p className="text-sm text-gray-800 mt-0.5 leading-relaxed">{active.objective}</p></div>
+              <div><span className="text-[12px] text-gray-400">目标用户</span>
+                <p className="text-sm text-gray-800 mt-0.5">{active.targetAudience}</p></div>
+            </div>
           </div>
           <div>
-            <span className="text-xs text-gray-400">建议镜头数</span>
-            <p className="text-gray-800">{active.sceneCount} 镜 · {active.duration}s/镜</p>
+            <h3 className="text-[13px] font-medium text-gray-500 mb-2">核心表达</h3>
+            <p className="text-sm text-gray-800 leading-relaxed">{active.coreMessage}</p>
           </div>
-          <div className="col-span-2">
-            <span className="text-xs text-gray-400">创作目标</span>
-            <textarea
-              value={active.objective}
-              onChange={(e) => setStoryboardBrief({ ...active, objective: e.target.value })}
-              className="w-full mt-1 text-sm text-gray-800 bg-transparent border-0 p-0 resize-none focus:ring-0"
-              rows={2}
-            />
-          </div>
-          <div className="col-span-2">
-            <span className="text-xs text-gray-400">目标用户</span>
-            <input
-              value={active.targetAudience}
-              onChange={(e) => setStoryboardBrief({ ...active, targetAudience: e.target.value })}
-              className="w-full mt-1 text-sm text-gray-800 bg-transparent border-0 p-0 focus:ring-0"
-            />
-          </div>
-          <div className="col-span-2">
-            <span className="text-xs text-gray-400">核心表达</span>
-            <input
-              value={active.coreMessage}
-              onChange={(e) => setStoryboardBrief({ ...active, coreMessage: e.target.value })}
-              className="w-full mt-1 text-sm text-gray-800 bg-transparent border-0 p-0 focus:ring-0"
-            />
-          </div>
-          <div className="col-span-2">
-            <span className="text-xs text-gray-400">视频结构</span>
-            <p className="text-sm text-gray-700 mt-1">
-              {active.storyStructure.join(' → ')}
-            </p>
-          </div>
-          <div className="col-span-2">
-            <span className="text-xs text-gray-400">视觉风格</span>
-            <p className="text-sm text-gray-700 mt-1">{active.visualStyle}</p>
+          <div>
+            <h3 className="text-[13px] font-medium text-gray-500 mb-2">视频结构与风格</h3>
+            <div className="space-y-3">
+              <div><span className="text-[12px] text-gray-400">视频结构</span>
+                <p className="text-sm text-gray-800 mt-0.5">{active.storyStructure.join(' → ')}</p></div>
+              <div><span className="text-[12px] text-gray-400">视觉风格</span>
+                <p className="text-sm text-gray-800 mt-0.5">{active.visualStyle}</p></div>
+            </div>
           </div>
         </div>
+
         {active.notes.length > 0 && (
-          <div className="mt-4 bg-amber-50 border border-amber-100 rounded-lg px-4 py-2.5 text-xs text-amber-700">
+          <div className="mt-4 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 text-[12px] text-amber-700">
             {active.notes.map((n: string, i: number) => <p key={i}>{n}</p>)}
           </div>
         )}
         <div className="flex gap-3 mt-5 pt-4 border-t border-slate-100">
           <button
             type="button"
-            onClick={() => setCurrentStep('input')}
+            onClick={() => {
+              if (scenesGenerated) {
+                if (!window.confirm('返回修改素材会清空当前生成的分镜结果，是否继续？')) return;
+                setScenesGenerated(false);
+                setGeneratedScenes([]);
+                setSyncedIds(new Set());
+              }
+              setCurrentStep('input');
+            }}
             className="h-9 px-4 rounded-lg text-sm font-medium text-gray-600 border border-slate-200 hover:bg-slate-50 transition-colors"
           >
             返回修改素材
           </button>
           <button
             type="button"
+            disabled={scenesGenerated}
             onClick={() => setIsAlternativeBrief(!isAlternativeBrief)}
-            className="h-9 px-4 rounded-lg text-sm font-medium text-gray-600 border border-slate-200 hover:bg-slate-50 transition-colors"
+            className={`h-9 px-4 rounded-lg text-sm font-medium border transition-colors ${
+              scenesGenerated ? 'text-gray-300 border-slate-100 cursor-not-allowed' : 'text-gray-600 border-slate-200 hover:bg-slate-50'
+            }`}
           >
             重新生成方案
           </button>
           <button
             type="button"
-            onClick={handleConfirmGenerate}
             disabled={loading}
+            onClick={scenesGenerated ? handleRegenerateAll : handleConfirmGenerate}
             className={`h-9 px-6 rounded-lg text-sm font-semibold transition-colors ml-auto ${
               loading ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-gray-800'
             }`}
           >
-            {loading ? '生成中...' : '确认并生成分镜'}
+            {loading ? '生成中...' : scenesGenerated ? '重新生成分镜' : '确认并生成分镜'}
           </button>
         </div>
       </div>
@@ -862,21 +743,76 @@ export default function SmartCreatePage() {
       ); })()
       )}
 
-      {currentStep === 'scenes' && storyboardBrief && (
-        (() => { const b = (isAlternativeBrief && alternativeBrief) || storyboardBrief!; return (
-      <div className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_4px_20px_rgba(15,23,42,0.04)] p-4">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-semibold text-gray-900">已确认方案</p>
-          <span className="text-[12px] text-gray-400">{getMaterialLabel(b.materialType)} · {b.contentType}</span>
+      {scenesGenerated && generatedScenes.length > 0 && (
+      <div id="scene-results" className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-gray-900">生成的分镜结果</p>
+            <p className="text-[13px] text-gray-500 mt-0.5">可直接修改下方文案与提示词，确认后同步到手工分镜继续精修。</p>
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={handleSyncAllToManual}
+              disabled={generatedScenes.every(s => syncedIds.has(s.id))}
+              className={`h-8 px-3 rounded-[6px] text-xs font-medium transition-colors ${
+                generatedScenes.every(s => syncedIds.has(s.id))
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-gray-900 text-white hover:bg-gray-800'
+              }`}>{generatedScenes.every(s => syncedIds.has(s.id)) ? '已全部同步' : '同步全部到手工分镜'}</button>
+            <button type="button" onClick={handleClearResults}
+              className="h-8 px-3 rounded-[6px] text-xs font-medium border border-gray-300 text-gray-500 hover:bg-gray-50 transition-colors">清空结果</button>
+          </div>
         </div>
-        <div className="grid grid-cols-4 gap-x-4 gap-y-1 text-[13px]">
-          <div><span className="text-gray-400">创作目标</span><p className="text-gray-700 truncate">{b.objective}</p></div>
-          <div><span className="text-gray-400">目标用户</span><p className="text-gray-700">{b.targetAudience}</p></div>
-          <div><span className="text-gray-400">核心表达</span><p className="text-gray-700 truncate">{b.coreMessage}</p></div>
-          <div><span className="text-gray-400">视频结构</span><p className="text-gray-700">{b.storyStructure.slice(0, 3).join(' → ')}</p></div>
+        <div className="space-y-4">
+          {generatedScenes.map((scene) => (
+            <div key={scene.id} className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-[0_4px_20px_rgba(15,23,42,0.04)]">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <span className="text-[13px] font-semibold text-gray-900">场景 {scene.id} · {scene.duration}秒</span>
+                  {sceneOutlines[scene.id - 1] && (
+                    <span className="ml-2 text-[11px] text-gray-400">结构：{sceneOutlines[scene.id - 1].title}</span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => handleCopyScene(scene)}
+                    className="text-xs text-gray-400 hover:text-gray-600 transition-colors">复制</button>
+                  <button type="button" onClick={() => handleSyncToManual(scene)}
+                    disabled={syncedIds.has(scene.id)}
+                    className={`text-xs transition-colors ${syncedIds.has(scene.id) ? 'text-gray-300 cursor-default' : 'text-gray-400 hover:text-gray-600'}`}>
+                    {syncedIds.has(scene.id) ? '已同步' : '同步到手工分镜'}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <span className="text-[12px] font-medium text-gray-500 mb-1 block">画面描述</span>
+                  <textarea value={isDemoResult ? DEMO_SCENE_DESCRIPTIONS[scene.id] || '' : ''} onChange={(e) => updateResultScene(scene.id, 'dialogue', e.target.value)}
+                    className="w-full rounded-[8px] border border-slate-200 bg-white px-3 py-2 text-sm text-gray-800 resize-none hover:border-slate-300 focus:border-sky-400/40 focus:ring-[3px] focus:ring-sky-100/50 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed" rows={2} />
+                </div>
+                <div>
+                  <span className="text-[12px] font-medium text-gray-500 mb-1 block">旁白</span>
+                  <textarea value={scene.dialogue} onChange={(e) => updateResultScene(scene.id, 'dialogue', e.target.value)}
+                    className="w-full rounded-[8px] border border-slate-200 bg-white px-3 py-2 text-sm text-gray-800 resize-none hover:border-slate-300 focus:border-sky-400/40 focus:ring-[3px] focus:ring-sky-100/50 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed" rows={2} />
+                </div>
+                <div>
+                  <span className="text-[12px] font-medium text-gray-500 mb-1 block">镜头提示词</span>
+                  <textarea value={scene.shotPrompt || ''} onChange={(e) => updateResultScene(scene.id, 'shotPrompt', e.target.value)}
+                    className="w-full rounded-[8px] border border-slate-200 bg-white px-3 py-2 text-sm text-gray-800 resize-none hover:border-slate-300 focus:border-sky-400/40 focus:ring-[3px] focus:ring-sky-100/50 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed" rows={2} />
+                </div>
+                <div>
+                  <span className="text-[12px] font-medium text-gray-500 mb-1 block">首帧提示词</span>
+                  <textarea value={scene.firstFrame?.sceneDescription || ''} onChange={(e) => updateResultScene(scene.id, 'firstFrameSceneDescription', e.target.value)}
+                    className="w-full rounded-[8px] border border-slate-200 bg-white px-3 py-2 text-sm text-gray-800 resize-none hover:border-slate-300 focus:border-sky-400/40 focus:ring-[3px] focus:ring-sky-100/50 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed" rows={2} />
+                </div>
+                <div>
+                  <span className="text-[12px] font-medium text-gray-500 mb-1 block">尾帧提示词</span>
+                  <textarea value={scene.lastFrame?.sceneDescription || ''} onChange={(e) => updateResultScene(scene.id, 'lastFrameSceneDescription', e.target.value)}
+                    className="w-full rounded-[8px] border border-slate-200 bg-white px-3 py-2 text-sm text-gray-800 resize-none hover:border-slate-300 focus:border-sky-400/40 focus:ring-[3px] focus:ring-sky-100/50 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed" rows={2} />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-      ); })()
       )}
 
       {errorMessage && (
@@ -885,15 +821,8 @@ export default function SmartCreatePage() {
         </div>
       )}
 
-      {currentStep !== 'scenes' && (
-      <div className="border border-dashed border-slate-200 rounded-xl p-4">
-        <ul className="space-y-1 text-[13px] text-gray-500">
-          <li>1. 选择视频类型、使用场景、创作目标和表达风格。</li>
-          <li>2. 输入素材，素材可以是文案、卖点、脚本或创意想法。</li>
-          <li>3. 系统先生成创意方案，确认后才生成分镜。</li>
-          <li>4. 分镜结果可同步到手工分镜继续精修。</li>
-        </ul>
-      </div>
+      {!scenesGenerated && (
+      <p className="text-[13px] text-gray-500 text-center">系统会先生成创意方案，确认后再生成可编辑分镜。</p>
       )}
 
       {loading && !showResults && (
