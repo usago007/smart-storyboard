@@ -412,63 +412,18 @@ export default function SmartCreatePage() {
           </button>
         </div>
         <div className="space-y-5">
-          <div className="flex items-center gap-3 text-xs text-gray-400 pb-3 border-b border-slate-100">
-            <span>输入素材</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
-            <span>选择节奏</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
-            <span className="text-gray-600 font-medium">生成分镜</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
-            <span>同步精修</span>
+          <div className="flex items-center gap-3 text-xs pb-3 border-b border-slate-100">
+            <span className="text-gray-600 font-medium">输入素材</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+            <span className="text-gray-600 font-medium">选择节奏</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+            <span className="text-gray-900 font-semibold">生成分镜</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+            <span className="text-gray-500 font-medium">同步精修</span>
           </div>
           <section>
-            <h2 className="text-sm font-semibold text-gray-900 mb-3">选择分镜时长</h2>
-            <p className="text-xs text-gray-500 mb-3">根据短视频节奏选择单个镜头长度，系统会自动控制每镜旁白密度。</p>
-            <div className="grid grid-cols-3 gap-3">
-              {durationConfigs.map((config) => (
-                <button
-                  key={config.seconds}
-                  type="button"
-                  onClick={() => {
-                    setSelectedDuration(config.seconds);
-                    setWordCount(config.recommendedWords);
-                  }}
-                  className={`h-[78px] rounded-[6px] border text-center flex flex-col items-center justify-center transition-colors ${
-                    selectedDuration === config.seconds
-                      ? 'border-gray-900 bg-white'
-                      : 'border-gray-300 bg-white hover:border-gray-400'
-                  }`}
-                >
-                  <span className="text-2xl font-bold text-gray-900">{config.label}</span>
-                  <span className="text-xs text-gray-400 mt-0.5">{config.subLabel}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="text-sm font-semibold text-gray-900">镜头文案密度</h2>
-              <span className="text-xs text-gray-400">字数范围：{currentConfig.range}</span>
-            </div>
-            <p className="text-xs text-gray-500 mb-3">系统会根据分镜时长自动建议每个镜头的旁白字数范围。</p>
-            <input
-              type="range"
-              min={currentConfig.minWords}
-              max={currentConfig.maxWords}
-              value={wordCount}
-              onChange={(e) => setWordCount(Number(e.target.value))}
-              className="w-full accent-gray-900"
-            />
-            <div className="flex justify-between text-xs text-gray-400 mt-1">
-              <span>{currentConfig.minWords}</span>
-              <span className="text-gray-700 font-medium">{wordCount}</span>
-              <span>{currentConfig.maxWords}</span>
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-sm font-semibold text-gray-900 mb-3">选择输入方式</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-1">输入素材</h2>
+            <p className="text-xs text-gray-500 mb-3">选择广告素材来源，输入或导入需要拆解的广告内容。</p>
             <div className="flex flex-wrap gap-2">
               {([
                 { id: 'text' as const, label: '手动输入' },
@@ -584,6 +539,50 @@ export default function SmartCreatePage() {
             </div>
           </section>
 
+          <section>
+            <h2 className="text-sm font-semibold text-gray-900 mb-1">选择节奏</h2>
+            <p className="text-xs text-gray-500 mb-3">根据短视频节奏选择单个镜头长度，并控制每镜旁白密度。</p>
+            <div className="grid grid-cols-3 gap-3">
+              {durationConfigs.map((config) => (
+                <button
+                  key={config.seconds}
+                  type="button"
+                  onClick={() => {
+                    setSelectedDuration(config.seconds);
+                    setWordCount(config.recommendedWords);
+                  }}
+                  className={`h-[84px] rounded-[10px] border-2 text-center flex flex-col items-center justify-center transition-all duration-150 ${
+                    selectedDuration === config.seconds
+                      ? 'border-gray-900 bg-gray-50'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <span className="text-2xl font-bold text-gray-900">{config.label}</span>
+                  <span className="text-xs text-gray-400 mt-0.5">{config.subLabel}</span>
+                </button>
+              ))}
+            </div>
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-gray-700">镜头文案密度</span>
+                <span className="text-xs text-gray-400">字数范围：{currentConfig.range}</span>
+              </div>
+              <input
+                type="range"
+                min={currentConfig.minWords}
+                max={currentConfig.maxWords}
+                value={wordCount}
+                onChange={(e) => setWordCount(Number(e.target.value))}
+                className="w-full accent-gray-900"
+              />
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>{currentConfig.minWords}</span>
+                <span className="text-gray-700 font-medium">{wordCount}</span>
+                <span>{currentConfig.maxWords}</span>
+              </div>
+            </div>
+          </section>
+
           {errorMessage && (
             <div className="bg-red-50 border border-red-200 rounded-[6px] px-4 py-2.5 text-xs text-red-700">
               {errorMessage}
@@ -591,6 +590,7 @@ export default function SmartCreatePage() {
           )}
 
           <div className="space-y-1">
+            <h2 className="text-sm font-semibold text-gray-900 mb-1">生成分镜</h2>
             <p className="text-xs text-gray-500">
               将生成 3 个镜头，每个镜头包含画面描述、旁白、镜头提示词、首帧提示词和尾帧提示词。
             </p>
