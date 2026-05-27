@@ -63,7 +63,7 @@ export default function ManualCreatePage() {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [lockedScenes, setLockedScenes] = useState<Set<number>>(new Set());
   const [activeSceneId, setActiveSceneId] = useState<number | null>(null);
-  const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
+  const [previewImage, setPreviewImage] = useState<{ url: string; name: string; downloadName?: string } | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -607,59 +607,74 @@ export default function ManualCreatePage() {
                 </div>
 
                 <div>
-                  <h3 className="text-xs font-medium text-gray-400 mb-2">视觉参考</h3>
-                  <div className="space-y-3">
-                    {[
-                      { key: 'firstFrameImage', label: '首帧参考图', url: scene.firstFrameImage },
-                      { key: 'lastFrameImage', label: '尾帧参考图', url: scene.lastFrameImage },
-                    ].map((area) => (
-                      <div key={area.key}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs font-medium text-gray-700">{area.label}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleGenerate(scene, area.key)}
-                            disabled={isLocked}
-                            className={`h-7 px-2.5 rounded-[4px] text-[11px] border transition-colors ${
-                              isLocked
-                                ? 'border-gray-200 text-gray-300 cursor-not-allowed'
-                                : 'border-gray-200 text-gray-400 hover:bg-gray-50'
-                            }`}
-                          >
-                            生成
-                          </button>
-                        </div>
-                        {(() => {
-                          const sketchUrl = getSketchUrl(area.url);
-                          if (sketchUrl) {
-                            const downloadName = `storyboard-scene-${scene.id}-${area.key === 'firstFrameImage' ? 'first' : 'last'}-frame.svg`;
-                            return (
+                  <h3 className="text-xs font-medium text-gray-400 mb-3">视觉参考</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {([
+                      { key: 'firstFrameImage' as const, label: '首帧参考图', frameType: 'first' as const },
+                      { key: 'lastFrameImage' as const, label: '尾帧参考图', frameType: 'last' as const },
+                    ]).map((area) => {
+                      const imgValue = area.key === 'firstFrameImage' ? scene.firstFrameImage : scene.lastFrameImage;
+                      const sketchUrl = getSketchUrl(imgValue);
+                      const downloadName = `storyboard-scene-${scene.id}-${area.frameType}-frame.svg`;
+                      const previewTitle = `${area.label} · 分镜 ${scene.id}`;
+                      return (
+                        <div key={area.key} className="border border-gray-200 rounded-[8px] p-3 flex flex-col gap-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-gray-700">{area.label}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleGenerate(scene, area.key)}
+                              disabled={isLocked}
+                              className={`text-[11px] px-2 py-0.5 rounded-[4px] border transition-colors ${
+                                isLocked
+                                  ? 'border-gray-200 text-gray-300 cursor-not-allowed'
+                                  : 'border-gray-200 text-gray-400 hover:bg-gray-50'
+                              }`}
+                            >
+                              生成
+                            </button>
+                          </div>
+                          {sketchUrl ? (
+                            <>
                               <button
                                 type="button"
-                                onClick={() => setPreviewImage({ url: sketchUrl, name: downloadName })}
-                                className="block w-full max-w-[160px] group relative"
+                                onClick={() => setPreviewImage({ url: sketchUrl, name: previewTitle, downloadName })}
+                                className="block w-full"
                               >
                                 <img
                                   src={sketchUrl}
                                   alt={area.label}
-                                  className="w-full aspect-square object-contain rounded-[4px] border border-gray-200"
+                                  className="w-full aspect-square object-contain rounded-[6px] border border-gray-200 hover:border-gray-400 transition-colors"
                                 />
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 rounded-[4px] flex items-center justify-center transition-colors">
-                                  <span className="opacity-0 group-hover:opacity-100 text-[10px] text-gray-500 bg-white px-2 py-1 rounded shadow-sm transition-opacity">
-                                    点击预览
-                                  </span>
-                                </div>
                               </button>
-                            );
-                          }
-                          return (
-                            <div className="h-12 bg-gray-50 border border-dashed border-gray-300 rounded-[4px] flex items-center justify-center text-xs text-gray-500">
+                              <div className="flex gap-2">
+                                <a
+                                  href={sketchUrl}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setPreviewImage({ url: sketchUrl, name: previewTitle, downloadName });
+                                  }}
+                                  className="flex-1 text-center text-[11px] text-gray-500 hover:text-gray-700 py-1.5 rounded-[6px] border border-gray-200 hover:bg-gray-50 transition-colors"
+                                >
+                                  预览
+                                </a>
+                                <a
+                                  href={sketchUrl}
+                                  download={downloadName}
+                                  className="flex-1 text-center text-[11px] text-gray-500 hover:text-gray-700 py-1.5 rounded-[6px] border border-gray-200 hover:bg-gray-50 transition-colors"
+                                >
+                                  下载
+                                </a>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="aspect-square bg-gray-50 border border-dashed border-gray-300 rounded-[6px] flex items-center justify-center text-[11px] text-gray-400">
                               {area.key === 'firstFrameImage' ? '点击生成首帧参考图' : '点击生成尾帧参考图'}
                             </div>
-                          );
-                        })()}
-                      </div>
-                    ))}
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -690,11 +705,11 @@ export default function ManualCreatePage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs text-gray-500 font-mono">{previewImage.name}</span>
+              <span className="text-sm font-semibold text-gray-800">{previewImage.name}</span>
               <div className="flex gap-2">
                 <a
                   href={previewImage.url}
-                  download={previewImage.name}
+                  download={previewImage.downloadName || 'storyboard-frame.svg'}
                   className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-[6px] border border-gray-200 transition-colors"
                 >
                   下载
