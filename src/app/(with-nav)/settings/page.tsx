@@ -130,11 +130,11 @@ export default function SettingsPage() {
   const { language } = useApp();
 
   return (
-    <div className="space-y-4">
-      <div className="bg-blue-50 border border-blue-100 rounded-[10px] px-4 py-3 text-xs text-blue-700 leading-relaxed">
+    <div className="w-full max-w-[1280px] mx-auto space-y-4">
+      <div className="bg-blue-50 border border-blue-100 rounded-[10px] px-4 py-3 text-[13px] text-blue-700 leading-relaxed">
         {language === 'zh'
-          ? '当前为前端 Demo 模式，生成链路使用 mock 数据展示；真实模型、数据库和存储服务可按配置接入。'
-          : 'Running in front-end demo mode. Generation pipeline uses mock data. Real models, databases, and storage services can be connected via configuration.'}
+          ? 'Demo 模式：生成链路使用 mock 数据，真实服务可按配置接入。'
+          : 'Demo mode: mock data pipeline. Real services can be configured.'}
       </div>
 
       <div className="grid grid-cols-4 gap-3">

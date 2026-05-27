@@ -303,16 +303,16 @@ export default function ManualCreatePage() {
   const totalChars = session.scenes.reduce((sum, s) => sum + s.dialogue.length, 0);
 
   return (
-    <div className="space-y-4">
+    <div className="w-full max-w-[1280px] mx-auto space-y-4">
       <div className="flex items-start justify-between">
         <div>
-          <span className="text-sm font-semibold text-gray-900">
+          <span className="text-base font-semibold text-gray-900">
             手工创建分镜 · {session.scenes.length} 个
           </span>
-          <p className="text-xs text-gray-400 mt-0.5">用于校正 AI 初稿，精修镜头表达、首尾帧提示词和参考图。</p>
+          <p className="text-[13px] text-gray-500 mt-0.5">校正 AI 初稿，精修提示词与参考图。</p>
         </div>
         <div className="flex items-center gap-3 pt-0.5">
-          <span className="text-xs text-gray-400">{session.duration}秒 {totalChars}字</span>
+          <span className="text-[13px] text-gray-500">{session.duration}秒 {totalChars}字</span>
           <button
             type="button"
             onClick={handleLoadDemoSession}
@@ -416,8 +416,8 @@ export default function ManualCreatePage() {
                 onClick={() => setExpanded((prev) => { const next = new Set(prev); if (next.has(scene.id)) next.delete(scene.id); else next.add(scene.id); return next; })}
                 className="flex items-center gap-2"
               >
-                <span className="text-sm font-semibold text-gray-900">分镜{scene.id}（{scene.duration}秒）</span>
-                <span className="text-xs text-gray-400">· {scene.dialogue.length}字</span>
+                <span className="text-[15px] font-semibold text-gray-900">分镜{scene.id}（{scene.duration}秒）</span>
+                <span className="text-[13px] text-gray-500">· {scene.dialogue.length}字</span>
                 <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${statusStyle[getSceneStatus(scene, lockedScenes)]}`}>
                   {statusLabel[getSceneStatus(scene, lockedScenes)]}
                 </span>

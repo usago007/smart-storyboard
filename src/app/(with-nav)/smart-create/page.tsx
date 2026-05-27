@@ -399,18 +399,18 @@ export default function SmartCreatePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-[1180px] mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-base font-semibold text-gray-800">将广告文案转换为可编辑的镜头脚本</p>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-base font-semibold text-gray-900">将广告文案转换为可编辑的镜头脚本</p>
+          <p className="text-[13px] text-gray-500 mt-1">
             输入素材 · 选择节奏 · 生成分镜 · 同步精修
           </p>
         </div>
         <button
           type="button"
           onClick={handleLoadDemo}
-          className="text-xs text-gray-400 hover:text-gray-600 transition-colors whitespace-nowrap"
+          className="text-[13px] text-gray-500 hover:text-gray-700 transition-colors whitespace-nowrap"
         >
           加载演示素材
         </button>
@@ -429,10 +429,10 @@ export default function SmartCreatePage() {
               key={tab.id}
               type="button"
               onClick={() => setInputMethod(tab.id)}
-              className={`rounded-full h-8 px-3 text-xs transition-colors ${
+              className={`rounded-full h-8 px-3 text-[13px] transition-colors ${
                 inputMethod === tab.id
                   ? 'bg-gray-900 text-white'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-700'
               }`}
             >
               {tab.label}
@@ -446,12 +446,12 @@ export default function SmartCreatePage() {
               value={script}
               onChange={(e) => setScript(e.target.value.slice(0, 3000))}
               placeholder="输入广告文案、产品卖点或脚本草稿..."
-              className="w-full h-[200px] border border-gray-200 rounded-xl p-4 text-sm text-gray-900 placeholder:text-gray-400 resize-none focus:border-gray-400 focus:ring-0"
+              className="w-full h-[200px] border border-gray-200 rounded-xl p-4 text-sm text-gray-800 placeholder:text-gray-400 resize-none focus:border-gray-400 focus:ring-0 leading-relaxed"
             />
             <div className="flex items-center justify-between mt-3">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-gray-400">节奏</span>
+                  <span className="text-[13px] text-gray-500">节奏</span>
                   {durationConfigs.map((config) => (
                     <button
                       key={config.seconds}
@@ -460,7 +460,7 @@ export default function SmartCreatePage() {
                         setSelectedDuration(config.seconds);
                         setWordCount(config.recommendedWords);
                       }}
-                      className={`h-7 px-2.5 rounded-md text-xs font-medium border transition-colors ${
+                      className={`h-7 px-2.5 rounded-md text-[13px] font-medium border transition-colors ${
                         selectedDuration === config.seconds
                           ? 'bg-gray-900 text-white border-gray-900'
                           : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
@@ -472,7 +472,7 @@ export default function SmartCreatePage() {
                 </div>
                 <span className="text-gray-200">|</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400">字数</span>
+                  <span className="text-[13px] text-gray-500">字数</span>
                   <input
                     type="range"
                     min={currentConfig.minWords}
@@ -481,14 +481,14 @@ export default function SmartCreatePage() {
                     onChange={(e) => setWordCount(Number(e.target.value))}
                     className="w-24 accent-gray-900"
                   />
-                  <span className="text-xs text-gray-600 font-medium w-6">{wordCount}</span>
+                  <span className="text-[13px] text-gray-700 font-medium w-6">{wordCount}</span>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={handleGenerate}
                 disabled={loading || !isInputValid}
-                className={`h-9 px-6 rounded-lg text-sm font-medium transition-colors ${
+                className={`h-9 px-6 rounded-lg text-sm font-semibold transition-colors ${
                   loading || !isInputValid
                     ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     : 'bg-gray-900 text-white hover:bg-gray-800 active:scale-[0.98]'
@@ -574,7 +574,7 @@ export default function SmartCreatePage() {
         </div>
       )}
 
-      <p className="text-xs text-gray-400 text-center">
+      <p className="text-[13px] text-gray-500 text-center">
         提示：输入完整广告文案，生成更稳定；生成后可同步到手工分镜精修。
       </p>
 
