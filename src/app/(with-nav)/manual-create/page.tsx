@@ -4,6 +4,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { getClientServices } from '@/application';
 import { useToast } from '@/lib/error-handler';
 import type { Scene, StoryboardSession } from '@/domain/storyboard';
+import {
+  DEMO_DURATION,
+  DEMO_WORD_COUNT,
+  DEMO_SCENES,
+} from '@/shared/demo-storyboard';
+import { getSketchUrl } from '@/shared/storyboard-sketches';
 
 function createScene(id: number, duration = 5): Scene {
   return {
@@ -57,6 +63,7 @@ export default function ManualCreatePage() {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [lockedScenes, setLockedScenes] = useState<Set<number>>(new Set());
   const [activeSceneId, setActiveSceneId] = useState<number | null>(null);
+  const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -125,13 +132,13 @@ export default function ManualCreatePage() {
           mockContent = '开篇全景，温暖的自然光线洒入室内，主角由远及近走来。';
           break;
         case 'firstFrameImage':
-          mockContent = 'mock:first-frame';
+          mockContent = `mock:first-frame-${(scene.id - 1) % 3 + 1}`;
           break;
         case 'lastFramePrompt':
           mockContent = '结尾特写，产品在主角手中绽放光芒，品牌Logo淡入。';
           break;
         case 'lastFrameImage':
-          mockContent = 'mock:last-frame';
+          mockContent = `mock:last-frame-${(scene.id - 1) % 3 + 1}`;
           break;
       }
       updateScene(scene.id, (item) => {
@@ -156,8 +163,8 @@ export default function ManualCreatePage() {
       shotPrompt: '镜头缓缓推进，特写产品细节，背景虚化突出主体。',
       firstFrame: { sceneDescription: '开篇全景，温暖的自然光线洒入室内，主角由远及近走来。', characterPerformance: '', cameraAngle: '', lighting: '', atmosphere: '' },
       lastFrame: { sceneDescription: '结尾特写，产品在主角手中绽放光芒，品牌Logo淡入。', characterPerformance: '', cameraAngle: '', lighting: '', atmosphere: '' },
-      firstFrameImage: 'mock:first-frame',
-      lastFrameImage: 'mock:last-frame',
+      firstFrameImage: `mock:first-frame-${(scene.id - 1) % 3 + 1}`,
+      lastFrameImage: `mock:last-frame-${(scene.id - 1) % 3 + 1}`,
     }));
   }, [session, updateScene]);
 
@@ -238,6 +245,36 @@ export default function ManualCreatePage() {
     setActiveSceneId(null);
   }, [session, lockedScenes, showToast]);
 
+  const handleLoadDemoSession = useCallback(() => {
+    if (!session) return;
+    const hasScenes = session.scenes.length > 0;
+    if (hasScenes) {
+      if (!window.confirm('当前已有分镜，加载演示分镜会覆盖当前分镜列表，是否继续？')) {
+        return;
+      }
+    }
+    const clonedScenes = JSON.parse(JSON.stringify(DEMO_SCENES));
+    const demoSession: StoryboardSession = {
+      sessionType: 'manual',
+      script: 'Manual Create',
+      duration: DEMO_DURATION,
+      wordCount: DEMO_WORD_COUNT,
+      scenes: clonedScenes,
+      updatedAt: new Date().toISOString(),
+    };
+    setSession(demoSession);
+    setExpanded(new Set(clonedScenes.map((s: Scene) => s.id)));
+    setLockedScenes(new Set());
+    setActiveSceneId(null);
+    sessionService.saveManualSession({
+      script: 'Manual Create',
+      duration: DEMO_DURATION,
+      wordCount: DEMO_WORD_COUNT,
+      scenes: clonedScenes,
+    });
+    showToast('已加载演示分镜', 'success');
+  }, [session, sessionService, showToast]);
+
   const handleCopyFullScene = useCallback(async (scene: Scene) => {
     const text = [
       `场景 ${scene.id}（${scene.duration}秒）`,
@@ -276,6 +313,13 @@ export default function ManualCreatePage() {
         </div>
         <div className="flex items-center gap-3 pt-0.5">
           <span className="text-xs text-gray-400">{session.duration}秒 {totalChars}字</span>
+          <button
+            type="button"
+            onClick={handleLoadDemoSession}
+            className="text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            加载演示分镜
+          </button>
           {session.scenes.length > 0 && (
             <>
               <button
@@ -310,13 +354,22 @@ export default function ManualCreatePage() {
           <p className="text-sm text-gray-500 max-w-[300px] mb-6">
             可以从智能分镜同步生成结果，也可以手动添加一个分镜。
           </p>
-          <button
-            type="button"
-            onClick={addScene}
-            className="h-10 px-5 rounded-[6px] bg-gray-900 text-white text-sm hover:bg-gray-800 transition-colors active:scale-[0.98]"
-          >
-            添加第一个分镜
-          </button>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={addScene}
+              className="h-10 px-5 rounded-[6px] bg-gray-900 text-white text-sm hover:bg-gray-800 transition-colors active:scale-[0.98]"
+            >
+              添加第一个分镜
+            </button>
+            <button
+              type="button"
+              onClick={handleLoadDemoSession}
+              className="h-10 px-5 rounded-[6px] border border-gray-300 text-gray-600 text-sm hover:bg-gray-50 transition-colors active:scale-[0.98]"
+            >
+              加载演示分镜
+            </button>
+          </div>
         </div>
       )}
 
@@ -576,15 +629,35 @@ export default function ManualCreatePage() {
                             生成
                           </button>
                         </div>
-                        {area.url ? (
-                          <div className="h-[72px] bg-gray-50 border border-dashed border-gray-300 rounded-[4px] flex items-center justify-center text-xs text-gray-500">
-                            {area.key === 'firstFrameImage' ? '首帧参考图已生成' : '尾帧参考图已生成'}
-                          </div>
-                        ) : (
-                          <div className="h-12 bg-gray-50 border border-dashed border-gray-300 rounded-[4px] flex items-center justify-center text-xs text-gray-500">
-                            {area.key === 'firstFrameImage' ? '点击生成首帧参考图' : '点击生成尾帧参考图'}
-                          </div>
-                        )}
+                        {(() => {
+                          const sketchUrl = getSketchUrl(area.url);
+                          if (sketchUrl) {
+                            const downloadName = `storyboard-scene-${scene.id}-${area.key === 'firstFrameImage' ? 'first' : 'last'}-frame.svg`;
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => setPreviewImage({ url: sketchUrl, name: downloadName })}
+                                className="block w-full max-w-[160px] group relative"
+                              >
+                                <img
+                                  src={sketchUrl}
+                                  alt={area.label}
+                                  className="w-full aspect-square object-contain rounded-[4px] border border-gray-200"
+                                />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 rounded-[4px] flex items-center justify-center transition-colors">
+                                  <span className="opacity-0 group-hover:opacity-100 text-[10px] text-gray-500 bg-white px-2 py-1 rounded shadow-sm transition-opacity">
+                                    点击预览
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          }
+                          return (
+                            <div className="h-12 bg-gray-50 border border-dashed border-gray-300 rounded-[4px] flex items-center justify-center text-xs text-gray-500">
+                              {area.key === 'firstFrameImage' ? '点击生成首帧参考图' : '点击生成尾帧参考图'}
+                            </div>
+                          );
+                        })()}
                       </div>
                     ))}
                   </div>
@@ -604,6 +677,43 @@ export default function ManualCreatePage() {
           >
             添加新分镜
           </button>
+        </div>
+      )}
+
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-8"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div
+            className="relative max-w-[90vw] max-h-[90vh] bg-white rounded-[10px] p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-gray-500 font-mono">{previewImage.name}</span>
+              <div className="flex gap-2">
+                <a
+                  href={previewImage.url}
+                  download={previewImage.name}
+                  className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-[6px] border border-gray-200 transition-colors"
+                >
+                  下载
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewImage(null)}
+                  className="text-xs text-gray-400 hover:text-gray-600 px-3 py-1.5 rounded-[6px] border border-gray-200 transition-colors"
+                >
+                  关闭
+                </button>
+              </div>
+            </div>
+            <img
+              src={previewImage.url}
+              alt=""
+              className="max-w-[80vw] max-h-[75vh] object-contain rounded-[6px]"
+            />
+          </div>
         </div>
       )}
     </div>

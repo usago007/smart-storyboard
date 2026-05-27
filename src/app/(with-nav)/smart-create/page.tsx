@@ -5,6 +5,13 @@ import { getClientServices } from '@/application';
 import { useApp } from '@/contexts/AppContext';
 import { useToast } from '@/lib/error-handler';
 import type { Scene } from '@/domain/storyboard';
+import {
+  DEMO_SCRIPT,
+  DEMO_DURATION,
+  DEMO_WORD_COUNT,
+  DEMO_SCENES,
+  DEMO_SCENE_DESCRIPTIONS,
+} from '@/shared/demo-storyboard';
 
 interface SpeechRecognition extends EventTarget {
   lang: string;
@@ -139,6 +146,7 @@ export default function SmartCreatePage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [syncedIds, setSyncedIds] = useState<Set<number>>(new Set());
   const [isRegenerated, setIsRegenerated] = useState(false);
+  const [isDemoResult, setIsDemoResult] = useState(false);
   const { showToast } = useToast();
 
   const recognitionRef = useRef<SpeechRecognition | null>(null) as React.MutableRefObject<SpeechRecognition | null>;
@@ -271,7 +279,7 @@ export default function SmartCreatePage() {
   const handleCopyScene = useCallback(async (scene: Scene) => {
     const text = [
       `场景 ${scene.id} · ${scene.duration}秒`,
-      `画面描述：${sceneTemplates[(scene.id - 1) % 6]}`,
+      `画面描述：${isDemoResult ? DEMO_SCENE_DESCRIPTIONS[scene.id] || '' : sceneTemplates[(scene.id - 1) % 6]}`,
       `旁白：${scene.dialogue}`,
       `镜头提示词：${scene.shotPrompt || ''}`,
       `首帧提示词：${scene.firstFrame?.sceneDescription || ''}`,
@@ -283,7 +291,7 @@ export default function SmartCreatePage() {
     } catch {
       showToast('复制失败', 'error');
     }
-  }, [showToast]);
+  }, [showToast, isDemoResult]);
 
   const handleSyncToManual = useCallback(async (scene: Scene) => {
     try {
@@ -359,7 +367,28 @@ export default function SmartCreatePage() {
     setGeneratedScenes([]);
     setSyncedIds(new Set());
     setIsRegenerated(false);
+    setIsDemoResult(false);
   }, []);
+
+  const handleLoadDemo = useCallback(() => {
+    const hasExistingContent = script.trim().length > 0 || generatedScenes.length > 0;
+    if (hasExistingContent) {
+      if (!window.confirm('当前已有内容，加载演示素材会覆盖当前输入和生成结果，是否继续？')) {
+        return;
+      }
+    }
+    setInputMethod('text');
+    setScript(DEMO_SCRIPT);
+    setSelectedDuration(DEMO_DURATION);
+    setWordCount(DEMO_WORD_COUNT);
+    setErrorMessage('');
+    setSyncedIds(new Set());
+    setGeneratedScenes(JSON.parse(JSON.stringify(DEMO_SCENES)));
+    setShowResults(true);
+    setIsRegenerated(false);
+    setIsDemoResult(true);
+    showToast('已加载演示素材', 'success');
+  }, [script, generatedScenes, showToast]);
 
   if (!settings) {
     return (
@@ -372,7 +401,16 @@ export default function SmartCreatePage() {
   return (
     <div className="space-y-5">
       <div className="bg-white border border-slate-200 rounded-[10px] p-6 shadow-sm">
-        <p className="text-sm font-semibold text-gray-800 mb-3">将广告文案转换为可编辑的镜头脚本</p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-semibold text-gray-800">将广告文案转换为可编辑的镜头脚本</p>
+          <button
+            type="button"
+            onClick={handleLoadDemo}
+            className="text-xs text-gray-400 hover:text-gray-600 transition-colors whitespace-nowrap"
+          >
+            加载演示素材
+          </button>
+        </div>
         <div className="space-y-5">
           <div className="flex items-center gap-3 text-xs text-gray-400 pb-3 border-b border-slate-100">
             <span>输入素材</span>
@@ -588,10 +626,10 @@ export default function SmartCreatePage() {
       )}
 
       {showResults && generatedScenes.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-[8px] p-6 shadow-sm">
+        <div className="bg-white border border-slate-200 rounded-[10px] p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-gray-900">
-              {isRegenerated ? '重新生成结果' : '生成结果'}
+              {isDemoResult ? '演示分镜结果' : isRegenerated ? '重新生成结果' : '生成结果'}
             </h2>
             <div className="flex gap-2">
               <button
@@ -650,7 +688,7 @@ export default function SmartCreatePage() {
                 <dl className="space-y-2 text-xs">
                   <div>
                     <dt className="text-gray-400">画面描述</dt>
-                    <dd className="text-gray-700 mt-0.5">{sceneTemplates[(scene.id - 1) % 6]}</dd>
+                    <dd className="text-gray-700 mt-0.5">{isDemoResult ? DEMO_SCENE_DESCRIPTIONS[scene.id] || sceneTemplates[(scene.id - 1) % 6] : sceneTemplates[(scene.id - 1) % 6]}</dd>
                   </div>
                   <div>
                     <dt className="text-gray-400">旁白</dt>
