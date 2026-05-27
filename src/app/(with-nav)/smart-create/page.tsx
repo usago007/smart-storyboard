@@ -399,222 +399,184 @@ export default function SmartCreatePage() {
   }
 
   return (
-    <div className="space-y-5">
-      <div className="bg-white border border-slate-200 rounded-[10px] p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-semibold text-gray-800">将广告文案转换为可编辑的镜头脚本</p>
-          <button
-            type="button"
-            onClick={handleLoadDemo}
-            className="text-xs text-gray-400 hover:text-gray-600 transition-colors whitespace-nowrap"
-          >
-            加载演示素材
-          </button>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-base font-semibold text-gray-800">将广告文案转换为可编辑的镜头脚本</p>
+          <p className="text-xs text-gray-400 mt-1">
+            输入素材 · 选择节奏 · 生成分镜 · 同步精修
+          </p>
         </div>
-        <div className="space-y-5">
-          <div className="flex items-center gap-3 text-xs pb-3 border-b border-slate-100">
-            <span className="text-gray-600 font-medium">输入素材</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
-            <span className="text-gray-600 font-medium">选择节奏</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
-            <span className="text-gray-900 font-semibold">生成分镜</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
-            <span className="text-gray-500 font-medium">同步精修</span>
-          </div>
-          <section>
-            <h2 className="text-sm font-semibold text-gray-900 mb-1">输入素材</h2>
-            <p className="text-xs text-gray-500 mb-3">选择广告素材来源，输入或导入需要拆解的广告内容。</p>
-            <div className="flex flex-wrap gap-2">
-              {([
-                { id: 'text' as const, label: '手动输入' },
-                { id: 'file' as const, label: '文件上传' },
-                { id: 'voice' as const, label: '语音输入' },
-                { id: 'url' as const, label: '链接导入' },
-                { id: 'template' as const, label: '预设模板' },
-              ]).map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setInputMethod(tab.id)}
-                  className={`rounded-[9999px] h-[38px] px-4 text-sm transition-colors ${
-                    inputMethod === tab.id
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+        <button
+          type="button"
+          onClick={handleLoadDemo}
+          className="text-xs text-gray-400 hover:text-gray-600 transition-colors whitespace-nowrap"
+        >
+          加载演示素材
+        </button>
+      </div>
 
-            <div className="mt-4">
-              {inputMethod === 'text' && (
-                <div>
-                  <textarea
-                    value={script}
-                    onChange={(e) => setScript(e.target.value.slice(0, 3000))}
-                    placeholder="请输入广告对白"
-                    className="w-full h-[110px] border border-gray-300 rounded-[6px] p-3 text-sm text-gray-900 placeholder:text-gray-400 resize-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                  />
-                  <div className="text-xs text-gray-400 mt-1 text-right">{script.length}/3000</div>
-                  {script.length === 3000 && (
-                    <p className="text-xs text-red-600 mt-1">内容超出长度限制，请精简后再生成。</p>
-                  )}
-                  {script.length < 20 && script.length > 0 && (
-                    <p className="text-xs text-amber-600 mt-1">文案偏短，建议补充产品卖点、使用场景或转化诉求。</p>
-                  )}
-                  {script.length >= 20 && script.length < 80 && (
-                    <p className="text-xs text-gray-500 mt-1">可以生成基础分镜，建议补充更多细节以提升镜头质量。</p>
-                  )}
-                  {script.length >= 80 && script.length < 3000 && (
-                    <p className="text-xs text-gray-500 mt-1">内容较完整，适合生成多镜头脚本。</p>
-                  )}
-                </div>
-              )}
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-6">
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {([
+            { id: 'text' as const, label: '手动输入' },
+            { id: 'file' as const, label: '文件上传' },
+            { id: 'voice' as const, label: '语音输入' },
+            { id: 'url' as const, label: '链接导入' },
+            { id: 'template' as const, label: '预设模板' },
+          ]).map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setInputMethod(tab.id)}
+              className={`rounded-full h-8 px-3 text-xs transition-colors ${
+                inputMethod === tab.id
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-              {inputMethod === 'file' && (
-                <div className="border-2 border-dashed border-gray-300 rounded-[6px] p-6 text-center">
-                  <label className="cursor-pointer flex flex-col items-center gap-2">
-                    <span className="text-sm text-gray-500">选择文件</span>
-                    <span className="text-xs text-gray-400">未选择任何文件</span>
-                    <input type="file" accept=".txt,text/plain" onChange={handleFileUpload} className="hidden" />
-                  </label>
-                  <p className="text-xs text-gray-400 mt-2">支持 .txt 格式，最大 10MB</p>
-                </div>
-              )}
-
-              {inputMethod === 'voice' && (
-                <div className="flex flex-col items-center gap-4 py-4">
-                  <button
-                    type="button"
-                    onClick={handleStartRecording}
-                    className={`w-[280px] h-11 rounded-[6px] text-sm font-medium transition-colors ${
-                      recording
-                        ? 'bg-red-600 text-white'
-                        : 'bg-gray-900 text-white hover:bg-gray-800'
-                    }`}
-                  >
-                    {recording ? '停止录音' : '开始录音'}
-                  </button>
-                  <p className="text-xs text-gray-400">建议使用Chrome或Edge浏览器以获得最佳体验</p>
-                </div>
-              )}
-
-              {inputMethod === 'url' && (
-                <div className="space-y-3">
-                  <input
-                    value={urlInput}
-                    onChange={(e) => setUrlInput(e.target.value)}
-                    placeholder="请输入网页链接…"
-                    className="w-full h-11 border border-gray-300 rounded-[6px] px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleImportUrl}
-                    disabled={importing}
-                    className="h-10 w-[86px] rounded-[6px] bg-gray-300 text-white text-sm disabled:opacity-50 hover:bg-gray-400 transition-colors"
-                  >
-                    {importing ? '导入中...' : '提取内容'}
-                  </button>
-                </div>
-              )}
-
-              {inputMethod === 'template' && (
-                <div className="grid grid-cols-2 gap-3">
-                  {templates.map((template) => (
+        {inputMethod === 'text' && (
+          <div>
+            <textarea
+              value={script}
+              onChange={(e) => setScript(e.target.value.slice(0, 3000))}
+              placeholder="输入广告文案、产品卖点或脚本草稿..."
+              className="w-full h-[200px] border border-gray-200 rounded-xl p-4 text-sm text-gray-900 placeholder:text-gray-400 resize-none focus:border-gray-400 focus:ring-0"
+            />
+            <div className="flex items-center justify-between mt-3">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-gray-400">节奏</span>
+                  {durationConfigs.map((config) => (
                     <button
-                      key={template.id}
+                      key={config.seconds}
                       type="button"
-                      onClick={() => { setScript(template.content); setInputMethod('text'); }}
-                      className="border border-gray-200 rounded-[6px] p-4 text-left hover:border-gray-400 transition-colors active:scale-[0.98]"
+                      onClick={() => {
+                        setSelectedDuration(config.seconds);
+                        setWordCount(config.recommendedWords);
+                      }}
+                      className={`h-7 px-2.5 rounded-md text-xs font-medium border transition-colors ${
+                        selectedDuration === config.seconds
+                          ? 'bg-gray-900 text-white border-gray-900'
+                          : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                      }`}
                     >
-                      <div className="font-semibold text-sm text-gray-900">{template.name}</div>
-                      <div className="mt-1 text-xs text-gray-600 leading-relaxed line-clamp-3">
-                        {template.content}
-                      </div>
+                      {config.label}
                     </button>
                   ))}
                 </div>
-              )}
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-sm font-semibold text-gray-900 mb-1">选择节奏</h2>
-            <p className="text-xs text-gray-500 mb-3">根据短视频节奏选择单个镜头长度，并控制每镜旁白密度。</p>
-            <div className="grid grid-cols-3 gap-3">
-              {durationConfigs.map((config) => (
-                <button
-                  key={config.seconds}
-                  type="button"
-                  onClick={() => {
-                    setSelectedDuration(config.seconds);
-                    setWordCount(config.recommendedWords);
-                  }}
-                  className={`h-[84px] rounded-[10px] border-2 text-center flex flex-col items-center justify-center transition-all duration-150 ${
-                    selectedDuration === config.seconds
-                      ? 'border-gray-900 bg-gray-50'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <span className="text-2xl font-bold text-gray-900">{config.label}</span>
-                  <span className="text-xs text-gray-400 mt-0.5">{config.subLabel}</span>
-                </button>
-              ))}
-            </div>
-            <div className="mt-4">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-gray-700">镜头文案密度</span>
-                <span className="text-xs text-gray-400">字数范围：{currentConfig.range}</span>
+                <span className="text-gray-200">|</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">字数</span>
+                  <input
+                    type="range"
+                    min={currentConfig.minWords}
+                    max={currentConfig.maxWords}
+                    value={wordCount}
+                    onChange={(e) => setWordCount(Number(e.target.value))}
+                    className="w-24 accent-gray-900"
+                  />
+                  <span className="text-xs text-gray-600 font-medium w-6">{wordCount}</span>
+                </div>
               </div>
-              <input
-                type="range"
-                min={currentConfig.minWords}
-                max={currentConfig.maxWords}
-                value={wordCount}
-                onChange={(e) => setWordCount(Number(e.target.value))}
-                className="w-full accent-gray-900"
-              />
-              <div className="flex justify-between text-xs text-gray-400 mt-1">
-                <span>{currentConfig.minWords}</span>
-                <span className="text-gray-700 font-medium">{wordCount}</span>
-                <span>{currentConfig.maxWords}</span>
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={loading || !isInputValid}
+                className={`h-9 px-6 rounded-lg text-sm font-medium transition-colors ${
+                  loading || !isInputValid
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-gray-900 text-white hover:bg-gray-800 active:scale-[0.98]'
+                }`}
+              >
+                {loading ? '生成中...' : '生成分镜'}
+              </button>
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <div className="text-xs text-gray-400">{script.length}/3000</div>
+              <div className="flex gap-3 text-xs text-gray-400">
+                {script.length === 3000 && <span className="text-red-500">内容超出长度限制</span>}
+                {script.length < 20 && script.length > 0 && <span className="text-amber-500">文案偏短</span>}
               </div>
             </div>
-          </section>
-
-          {errorMessage && (
-            <div className="bg-red-50 border border-red-200 rounded-[6px] px-4 py-2.5 text-xs text-red-700">
-              {errorMessage}
-            </div>
-          )}
-
-          <div className="space-y-1">
-            <h2 className="text-sm font-semibold text-gray-900 mb-1">生成分镜</h2>
-            <p className="text-xs text-gray-500">
-              将生成 3 个镜头，每个镜头包含画面描述、旁白、镜头提示词、首帧提示词和尾帧提示词。
-            </p>
-            <p className="text-xs text-gray-400">
-              {selectedDuration === 5 && '5s — 适合快节奏广告切片'}
-              {selectedDuration === 10 && '10s — 适合完整卖点表达'}
-              {selectedDuration === 12 && '12s — 适合情绪铺垫和产品展示'}
-            </p>
           </div>
+        )}
 
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={loading || !isInputValid}
-            className={`w-full h-11 rounded-[6px] text-sm font-medium transition-colors ${
-              loading || !isInputValid
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                : 'bg-gray-900 text-white hover:bg-gray-800 active:scale-[0.98]'
-            }`}
-          >
-            {loading ? '生成中...' : '生成分镜'}
-          </button>
-        </div>
+        {inputMethod === 'file' && (
+          <div className="border-2 border-dashed border-gray-200 rounded-xl p-12 text-center">
+            <label className="cursor-pointer flex flex-col items-center gap-2">
+              <span className="text-sm text-gray-500">选择文件</span>
+              <span className="text-xs text-gray-400">支持 .txt 格式，最大 10MB</span>
+              <input type="file" accept=".txt,text/plain" onChange={handleFileUpload} className="hidden" />
+            </label>
+          </div>
+        )}
+
+        {inputMethod === 'voice' && (
+          <div className="flex flex-col items-center gap-4 py-12">
+            <button
+              type="button"
+              onClick={handleStartRecording}
+              className={`w-48 h-10 rounded-lg text-sm font-medium transition-colors ${
+                recording ? 'bg-red-600 text-white' : 'bg-gray-900 text-white hover:bg-gray-800'
+              }`}
+            >
+              {recording ? '停止录音' : '开始录音'}
+            </button>
+            <p className="text-xs text-gray-400">建议使用 Chrome 或 Edge 浏览器</p>
+          </div>
+        )}
+
+        {inputMethod === 'url' && (
+          <div className="flex gap-3">
+            <input
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              placeholder="粘贴网页链接..."
+              className="flex-1 h-10 border border-gray-200 rounded-lg px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:ring-0"
+            />
+            <button
+              type="button"
+              onClick={handleImportUrl}
+              disabled={importing}
+              className="h-10 px-4 rounded-lg bg-gray-200 text-gray-700 text-sm disabled:opacity-50 hover:bg-gray-300 transition-colors"
+            >
+              {importing ? '导入中...' : '提取'}
+            </button>
+          </div>
+        )}
+
+        {inputMethod === 'template' && (
+          <div className="grid grid-cols-2 gap-3">
+            {templates.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                onClick={() => { setScript(template.content); setInputMethod('text'); }}
+                className="border border-gray-200 rounded-lg p-4 text-left hover:border-gray-400 transition-colors active:scale-[0.98]"
+              >
+                <div className="font-semibold text-sm text-gray-900">{template.name}</div>
+                <div className="mt-1 text-xs text-gray-500 leading-relaxed line-clamp-3">{template.content}</div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-xs text-red-700">
+          {errorMessage}
+        </div>
+      )}
+
+      <p className="text-xs text-gray-400 text-center">
+        提示：输入完整广告文案，生成更稳定；生成后可同步到手工分镜精修。
+      </p>
 
       {loading && !showResults && (
         <div className="bg-white border border-gray-200 rounded-[8px] p-6 shadow-sm animate-pulse space-y-3">
