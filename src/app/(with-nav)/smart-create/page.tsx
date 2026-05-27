@@ -1,17 +1,34 @@
 'use client';
 
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { getClientServices } from '@/application';
 import { useApp } from '@/contexts/AppContext';
 import { useToast } from '@/lib/error-handler';
 import type { Scene } from '@/domain/storyboard';
+import type { SceneOutline } from '@/shared/storyboard-brief';
 import {
   DEMO_SCRIPT,
   DEMO_DURATION,
   DEMO_WORD_COUNT,
-  DEMO_SCENES,
   DEMO_SCENE_DESCRIPTIONS,
 } from '@/shared/demo-storyboard';
+import {
+  type StoryboardBrief,
+  type CreationType,
+  type ScenarioType,
+  type ObjectiveType,
+  type StyleType,
+  CREATION_TYPES,
+  SCENARIOS,
+  OBJECTIVES,
+  STYLES,
+  generateMockStoryboardBrief,
+  generateAlternativeBrief,
+  buildScriptFromBrief,
+  buildSceneOutlinesFromBrief,
+  getMaterialLabel,
+} from '@/shared/storyboard-brief';
 
 interface SpeechRecognition extends EventTarget {
   lang: string;
@@ -132,6 +149,7 @@ function enrichScenesV2(scenes: Scene[]): Scene[] {
 
 export default function SmartCreatePage() {
   const { settings } = useApp();
+  const router = useRouter();
   const { storyboardService, sessionService } = getClientServices();
   const [inputMethod, setInputMethod] = useState<InputMethod>('text');
   const [script, setScript] = useState('');
@@ -147,6 +165,16 @@ export default function SmartCreatePage() {
   const [syncedIds, setSyncedIds] = useState<Set<number>>(new Set());
   const [isRegenerated, setIsRegenerated] = useState(false);
   const [isDemoResult, setIsDemoResult] = useState(false);
+  const [currentStep, setCurrentStep] = useState<'input' | 'brief' | 'scenes'>('input');
+  const [storyboardBrief, setStoryboardBrief] = useState<StoryboardBrief | null>(null);
+  const [alternativeBrief, setAlternativeBrief] = useState<StoryboardBrief | null>(null);
+  const [isAlternativeBrief, setIsAlternativeBrief] = useState(false);
+  const [sceneOutlines, setSceneOutlines] = useState<SceneOutline[]>([]);
+  const [selectedCreationType, setSelectedCreationType] = useState<CreationType>('adCreative');
+  const [selectedScenario, setSelectedScenario] = useState<ScenarioType>('douyin');
+  const [selectedObjective, setSelectedObjective] = useState<ObjectiveType>('conversion');
+  const [selectedStyle, setSelectedStyle] = useState<StyleType>('commercial');
+  const [showTaskConfig, setShowTaskConfig] = useState(false);
   const { showToast } = useToast();
 
   const recognitionRef = useRef<SpeechRecognition | null>(null) as React.MutableRefObject<SpeechRecognition | null>;
@@ -164,30 +192,63 @@ export default function SmartCreatePage() {
     return () => clearTimeout(t);
   }, [errorMessage]);
 
-  const handleGenerate = useCallback(async () => {
+  const handleGenerateBrief = useCallback(async () => {
     if (!isInputValid) return;
     if (script.trim().length < 20) {
       setErrorMessage('广告文案过短，建议补充产品特点、使用场景或转化诉求。');
       return;
     }
     setLoading(true);
-    setShowResults(false);
+    setErrorMessage('');
     try {
-      const draft = await storyboardService.splitScenes({
+      const brief = generateMockStoryboardBrief({
+        creationType: selectedCreationType,
+        scenario: selectedScenario,
+        objective: selectedObjective,
+        style: selectedStyle,
         script,
         duration: selectedDuration,
+      });
+      const altBrief = generateAlternativeBrief(brief);
+      setStoryboardBrief(brief);
+      setAlternativeBrief(altBrief);
+      setIsAlternativeBrief(false);
+      setCurrentStep('brief');
+    } catch {
+      setErrorMessage('创意方案生成失败，请重试');
+    } finally {
+      setLoading(false);
+    }
+  }, [isInputValid, script, selectedDuration, selectedCreationType, selectedScenario, selectedObjective, selectedStyle]);
+
+  const handleConfirmGenerate = useCallback(async () => {
+    const activeBrief = isAlternativeBrief && alternativeBrief ? alternativeBrief : storyboardBrief;
+    if (!activeBrief) return;
+    if (!activeBrief.coreMessage || activeBrief.coreMessage === '请根据素材补充核心表达') {
+      setErrorMessage('请补充核心表达或创作目标');
+      return;
+    }
+    setLoading(true);
+    setErrorMessage('');
+    try {
+      const generationScript = buildScriptFromBrief(script, activeBrief);
+      const draft = await storyboardService.splitScenes({
+        script: generationScript,
+        duration: activeBrief.duration,
         wordCount,
       });
+      const outlines = buildSceneOutlinesFromBrief(activeBrief);
+      setSceneOutlines(outlines);
       const enriched = enrichScenes(draft.scenes);
       setGeneratedScenes(enriched);
-      setShowResults(true);
+      setCurrentStep('scenes');
       await sessionService.saveAutoSession({ ...draft, wordCount });
     } catch {
       setErrorMessage('分镜生成失败，请稍后重试');
     } finally {
       setLoading(false);
     }
-  }, [isInputValid, script, selectedDuration, wordCount, storyboardService, sessionService]);
+  }, [script, storyboardBrief, alternativeBrief, isAlternativeBrief, wordCount, storyboardService, sessionService]);
 
   const handleImportUrl = useCallback(async () => {
     if (!urlInput.trim()) {
@@ -317,11 +378,12 @@ export default function SmartCreatePage() {
       manualSession.updatedAt = new Date().toISOString();
       await sessionService.saveManualSession(manualSession);
       setSyncedIds((prev) => new Set([...prev, scene.id]));
-      showToast('已同步到手工分镜', 'success');
+      showToast('已同步，正在跳转到手工分镜', 'success');
+      setTimeout(() => router.push('/manual-create/'), 600);
     } catch {
       showToast('同步失败', 'error');
     }
-  }, [sessionService, selectedDuration, wordCount, showToast]);
+  }, [sessionService, selectedDuration, wordCount, showToast, router]);
 
   const handleSyncAllToManual = useCallback(async () => {
     try {
@@ -348,23 +410,35 @@ export default function SmartCreatePage() {
       manualSession.updatedAt = new Date().toISOString();
       await sessionService.saveManualSession(manualSession);
       setSyncedIds(new Set(generatedScenes.map((s) => s.id)));
-      showToast('已同步全部到手工分镜', 'success');
+      showToast('已同步，正在跳转到手工分镜', 'success');
+      setTimeout(() => router.push('/manual-create/'), 600);
     } catch {
       showToast('同步失败', 'error');
     }
-  }, [sessionService, selectedDuration, wordCount, generatedScenes, showToast]);
+  }, [sessionService, selectedDuration, wordCount, generatedScenes, showToast, router]);
 
   const handleRegenerateAll = useCallback(() => {
-    setGeneratedScenes((prev) => enrichScenesV2(
-      prev.map(({ id, name, dialogue, duration }) => ({ id, name, dialogue, duration })),
-    ));
+    if (sceneOutlines.length > 0) {
+      setGeneratedScenes((prev) => enrichScenesV2(
+        prev.map(({ id, name, dialogue, duration }) => ({ id, name, dialogue, duration })),
+      ));
+    } else {
+      setGeneratedScenes((prev) => enrichScenesV2(
+        prev.map(({ id, name, dialogue, duration }) => ({ id, name, dialogue, duration })),
+      ));
+    }
     setIsRegenerated(true);
     showToast('已重新生成结果', 'success');
-  }, [showToast]);
+  }, [showToast, sceneOutlines]);
 
   const handleClearResults = useCallback(() => {
+    setCurrentStep('input');
     setShowResults(false);
     setGeneratedScenes([]);
+    setSceneOutlines([]);
+    setStoryboardBrief(null);
+    setAlternativeBrief(null);
+    setIsAlternativeBrief(false);
     setSyncedIds(new Set());
     setIsRegenerated(false);
     setIsDemoResult(false);
@@ -381,12 +455,29 @@ export default function SmartCreatePage() {
     setScript(DEMO_SCRIPT);
     setSelectedDuration(DEMO_DURATION);
     setWordCount(DEMO_WORD_COUNT);
+    setSelectedCreationType('adCreative');
+    setSelectedScenario('douyin');
+    setSelectedObjective('conversion');
+    setSelectedStyle('commercial');
     setErrorMessage('');
     setSyncedIds(new Set());
-    setGeneratedScenes(JSON.parse(JSON.stringify(DEMO_SCENES)));
-    setShowResults(true);
+    setGeneratedScenes([]);
     setIsRegenerated(false);
     setIsDemoResult(true);
+    setCurrentStep('input');
+    const brief = generateMockStoryboardBrief({
+      creationType: 'adCreative',
+      scenario: 'douyin',
+      objective: 'conversion',
+      style: 'commercial',
+      script: DEMO_SCRIPT,
+      duration: DEMO_DURATION,
+    });
+    const altBrief = generateAlternativeBrief(brief);
+    setStoryboardBrief(brief);
+    setAlternativeBrief(altBrief);
+    setIsAlternativeBrief(false);
+    setCurrentStep('brief');
     showToast('已加载演示素材', 'success');
   }, [script, generatedScenes, showToast]);
 
@@ -403,9 +494,14 @@ export default function SmartCreatePage() {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-base font-semibold text-gray-900">将广告文案转换为可编辑的镜头脚本</p>
-          <p className="text-[13px] text-gray-500 mt-1">
-            输入素材 · 选择节奏 · 生成分镜 · 同步精修
-          </p>
+          <p className="text-[13px] text-gray-500 mt-1">输入素材后，系统会自动推荐创作参数并生成可确认的创意方案。</p>
+          <div className="flex items-center gap-1.5 text-[13px] mt-2">
+            <span className={`px-2 py-0.5 rounded-full ${currentStep === 'input' ? 'bg-gray-100 text-gray-800 font-medium' : 'text-gray-400'}`}>1 任务与素材</span>
+            <span className="text-gray-300">→</span>
+            <span className={`px-2 py-0.5 rounded-full ${currentStep === 'brief' ? 'bg-gray-100 text-gray-800 font-medium' : 'text-gray-400'}`}>2 方案确认</span>
+            <span className="text-gray-300">→</span>
+            <span className={`px-2 py-0.5 rounded-full ${currentStep === 'scenes' ? 'bg-gray-100 text-gray-800 font-medium' : 'text-gray-400'}`}>3 分镜结果</span>
+          </div>
         </div>
         <button
           type="button"
@@ -416,7 +512,11 @@ export default function SmartCreatePage() {
         </button>
       </div>
 
+      {currentStep === 'input' && (
+      <div>
       <div className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_8px_30px_rgba(15,23,42,0.04)] p-6">
+        <p className="text-sm font-semibold text-gray-900 mb-1">先输入你的素材</p>
+        <p className="text-[13px] text-gray-500 mb-3">输入广告文案、产品卖点、口播草稿、品牌介绍或创意想法。系统会自动推荐创作参数。</p>
         <div className="flex flex-wrap gap-1.5 mb-4">
           {([
             { id: 'text' as const, label: '手动输入' },
@@ -445,7 +545,7 @@ export default function SmartCreatePage() {
             <textarea
               value={script}
               onChange={(e) => setScript(e.target.value.slice(0, 3000))}
-              placeholder="输入广告文案、产品卖点或脚本草稿..."
+              placeholder="输入你的素材，例如产品卖点、广告文案、口播草稿、品牌介绍或创意想法..."
               className="w-full h-[200px] border border-slate-200 rounded-xl p-4 text-sm text-gray-800 placeholder:text-gray-400 resize-none focus:border-sky-400/40 focus:ring-[3px] focus:ring-sky-100/50 focus:ring-offset-0 leading-relaxed transition-shadow duration-200"
             />
             <div className="flex items-center justify-between mt-3">
@@ -486,7 +586,7 @@ export default function SmartCreatePage() {
               </div>
               <button
                 type="button"
-                onClick={handleGenerate}
+                onClick={handleGenerateBrief}
                 disabled={loading || !isInputValid}
                 className={`h-9 px-6 rounded-lg text-sm font-semibold transition-colors ${
                   loading || !isInputValid
@@ -494,7 +594,7 @@ export default function SmartCreatePage() {
                     : 'bg-gray-900 text-white hover:bg-gray-800 active:scale-[0.98]'
                 }`}
               >
-                {loading ? '生成中...' : '生成分镜'}
+                {loading ? '生成中...' : '生成创意方案'}
               </button>
             </div>
             <div className="flex items-center justify-between mt-2">
@@ -568,15 +668,233 @@ export default function SmartCreatePage() {
         )}
       </div>
 
+      <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center gap-2 text-[13px]">
+          <span className="text-gray-500">系统推荐：</span>
+          {script.trim().length > 0 ? (
+            <>
+              <span className="text-gray-700 font-medium">{CREATION_TYPES.find(t => t.value === selectedCreationType)?.label}</span>
+              <span className="text-gray-300">·</span>
+              <span className="text-gray-600">{SCENARIOS.find(s => s.value === selectedScenario)?.label}</span>
+              <span className="text-gray-300">·</span>
+              <span className="text-gray-600">{OBJECTIVES.find(o => o.value === selectedObjective)?.label}</span>
+              <span className="text-gray-300">·</span>
+              <span className="text-gray-600">{STYLES.find(s => s.value === selectedStyle)?.label}</span>
+            </>
+          ) : (
+            <span className="text-gray-400">输入素材后将自动推荐创作参数</span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowTaskConfig(!showTaskConfig)}
+          className="text-[13px] text-gray-500 hover:text-gray-700 transition-colors"
+        >
+          {showTaskConfig ? '收起' : '调整'}
+        </button>
+      </div>
+
+      {showTaskConfig && (
+      <div className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_4px_20px_rgba(15,23,42,0.04)] p-5">
+        <p className="text-[13px] text-gray-500 mb-3">系统已根据素材自动推荐，也可以手动调整。</p>
+        <div className="space-y-3">
+          <div>
+            <span className="text-[13px] font-medium text-gray-700 mb-1.5 block">视频类型</span>
+            <div className="flex flex-wrap gap-2">
+              {CREATION_TYPES.map((ct) => (
+                <button
+                  key={ct.value}
+                  type="button"
+                  onClick={() => setSelectedCreationType(ct.value)}
+                  className={`px-3 py-1.5 rounded-full text-[13px] border transition-colors ${
+                    selectedCreationType === ct.value
+                      ? 'bg-gray-900 text-white border-gray-900'
+                      : 'bg-white text-gray-500 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  {ct.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <span className="text-[13px] font-medium text-gray-700 mb-1.5 block">使用场景</span>
+              <div className="space-y-0.5">
+                {SCENARIOS.map((s) => (
+                  <button key={s.value} type="button" onClick={() => setSelectedScenario(s.value)}
+                    className={`w-full text-left px-2 py-1 rounded text-[13px] transition-colors ${
+                      selectedScenario === s.value
+                        ? 'bg-slate-100 text-gray-900 font-medium border-l-[3px] border-gray-900 rounded-l-none'
+                        : 'text-gray-600 hover:bg-slate-50 border-l-[3px] border-transparent'
+                    }`}>{s.label}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <span className="text-[13px] font-medium text-gray-700 mb-1.5 block">创作目标</span>
+              <div className="space-y-0.5">
+                {OBJECTIVES.map((o) => (
+                  <button key={o.value} type="button" onClick={() => setSelectedObjective(o.value)}
+                    className={`w-full text-left px-2 py-1 rounded text-[13px] transition-colors ${
+                      selectedObjective === o.value
+                        ? 'bg-slate-100 text-gray-900 font-medium border-l-[3px] border-gray-900 rounded-l-none'
+                        : 'text-gray-600 hover:bg-slate-50 border-l-[3px] border-transparent'
+                    }`}>{o.label}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <span className="text-[13px] font-medium text-gray-700 mb-1.5 block">表达风格</span>
+              <div className="space-y-0.5">
+                {STYLES.map((s) => (
+                  <button key={s.value} type="button" onClick={() => setSelectedStyle(s.value)}
+                    className={`w-full text-left px-2 py-1 rounded text-[13px] transition-colors ${
+                      selectedStyle === s.value
+                        ? 'bg-slate-100 text-gray-900 font-medium border-l-[3px] border-gray-900 rounded-l-none'
+                        : 'text-gray-600 hover:bg-slate-50 border-l-[3px] border-transparent'
+                    }`}>{s.label}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      )}
+      </div>
+      )}
+
+      {currentStep === 'brief' && storyboardBrief && (
+        (() => { const active = (isAlternativeBrief && alternativeBrief) || storyboardBrief!; return (
+      <>
+      <div className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_8px_30px_rgba(15,23,42,0.04)] p-6">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-semibold text-gray-900">创意方案确认</p>
+        </div>
+        <div className="flex items-center gap-3 mb-4 text-[13px]">
+          <span className="text-gray-500">素材识别：</span>
+          <span className="px-2 py-0.5 rounded-full bg-slate-100 text-gray-700 font-medium">{getMaterialLabel(active.materialType)}</span>
+          {storyboardBrief.contentType && (
+            <>
+              <span className="text-gray-300">·</span>
+              <span className="text-gray-600">{storyboardBrief.contentType}</span>
+            </>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+          <div>
+            <span className="text-xs text-gray-400">内容类型</span>
+            <p className="text-gray-800">{active.contentType}</p>
+          </div>
+          <div>
+            <span className="text-xs text-gray-400">建议镜头数</span>
+            <p className="text-gray-800">{active.sceneCount} 镜 · {active.duration}s/镜</p>
+          </div>
+          <div className="col-span-2">
+            <span className="text-xs text-gray-400">创作目标</span>
+            <textarea
+              value={active.objective}
+              onChange={(e) => setStoryboardBrief({ ...active, objective: e.target.value })}
+              className="w-full mt-1 text-sm text-gray-800 bg-transparent border-0 p-0 resize-none focus:ring-0"
+              rows={2}
+            />
+          </div>
+          <div className="col-span-2">
+            <span className="text-xs text-gray-400">目标用户</span>
+            <input
+              value={active.targetAudience}
+              onChange={(e) => setStoryboardBrief({ ...active, targetAudience: e.target.value })}
+              className="w-full mt-1 text-sm text-gray-800 bg-transparent border-0 p-0 focus:ring-0"
+            />
+          </div>
+          <div className="col-span-2">
+            <span className="text-xs text-gray-400">核心表达</span>
+            <input
+              value={active.coreMessage}
+              onChange={(e) => setStoryboardBrief({ ...active, coreMessage: e.target.value })}
+              className="w-full mt-1 text-sm text-gray-800 bg-transparent border-0 p-0 focus:ring-0"
+            />
+          </div>
+          <div className="col-span-2">
+            <span className="text-xs text-gray-400">视频结构</span>
+            <p className="text-sm text-gray-700 mt-1">
+              {active.storyStructure.join(' → ')}
+            </p>
+          </div>
+          <div className="col-span-2">
+            <span className="text-xs text-gray-400">视觉风格</span>
+            <p className="text-sm text-gray-700 mt-1">{active.visualStyle}</p>
+          </div>
+        </div>
+        {active.notes.length > 0 && (
+          <div className="mt-4 bg-amber-50 border border-amber-100 rounded-lg px-4 py-2.5 text-xs text-amber-700">
+            {active.notes.map((n: string, i: number) => <p key={i}>{n}</p>)}
+          </div>
+        )}
+        <div className="flex gap-3 mt-5 pt-4 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={() => setCurrentStep('input')}
+            className="h-9 px-4 rounded-lg text-sm font-medium text-gray-600 border border-slate-200 hover:bg-slate-50 transition-colors"
+          >
+            返回修改素材
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsAlternativeBrief(!isAlternativeBrief)}
+            className="h-9 px-4 rounded-lg text-sm font-medium text-gray-600 border border-slate-200 hover:bg-slate-50 transition-colors"
+          >
+            重新生成方案
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirmGenerate}
+            disabled={loading}
+            className={`h-9 px-6 rounded-lg text-sm font-semibold transition-colors ml-auto ${
+              loading ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-gray-800'
+            }`}
+          >
+            {loading ? '生成中...' : '确认并生成分镜'}
+          </button>
+        </div>
+      </div>
+      </>
+      ); })()
+      )}
+
+      {currentStep === 'scenes' && storyboardBrief && (
+        (() => { const b = (isAlternativeBrief && alternativeBrief) || storyboardBrief!; return (
+      <div className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_4px_20px_rgba(15,23,42,0.04)] p-4">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-semibold text-gray-900">已确认方案</p>
+          <span className="text-[12px] text-gray-400">{getMaterialLabel(b.materialType)} · {b.contentType}</span>
+        </div>
+        <div className="grid grid-cols-4 gap-x-4 gap-y-1 text-[13px]">
+          <div><span className="text-gray-400">创作目标</span><p className="text-gray-700 truncate">{b.objective}</p></div>
+          <div><span className="text-gray-400">目标用户</span><p className="text-gray-700">{b.targetAudience}</p></div>
+          <div><span className="text-gray-400">核心表达</span><p className="text-gray-700 truncate">{b.coreMessage}</p></div>
+          <div><span className="text-gray-400">视频结构</span><p className="text-gray-700">{b.storyStructure.slice(0, 3).join(' → ')}</p></div>
+        </div>
+      </div>
+      ); })()
+      )}
+
       {errorMessage && (
         <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-xs text-red-700">
           {errorMessage}
         </div>
       )}
 
-      <p className="text-[13px] text-gray-500 text-center">
-        提示：输入完整广告文案，生成更稳定；生成后可同步到手工分镜精修。
-      </p>
+      {currentStep !== 'scenes' && (
+      <div className="border border-dashed border-slate-200 rounded-xl p-4">
+        <ul className="space-y-1 text-[13px] text-gray-500">
+          <li>1. 选择视频类型、使用场景、创作目标和表达风格。</li>
+          <li>2. 输入素材，素材可以是文案、卖点、脚本或创意想法。</li>
+          <li>3. 系统先生成创意方案，确认后才生成分镜。</li>
+          <li>4. 分镜结果可同步到手工分镜继续精修。</li>
+        </ul>
+      </div>
+      )}
 
       {loading && !showResults && (
         <div className="bg-white border border-gray-200 rounded-[8px] p-6 shadow-sm animate-pulse space-y-3">
@@ -587,7 +905,7 @@ export default function SmartCreatePage() {
         </div>
       )}
 
-      {showResults && generatedScenes.length > 0 && (
+      {currentStep === 'scenes' && generatedScenes.length > 0 && (
         <div className="bg-white border border-slate-200 rounded-[10px] p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-gray-900">
@@ -621,9 +939,14 @@ export default function SmartCreatePage() {
             {generatedScenes.map((scene) => (
               <div key={scene.id} className="border border-gray-200 rounded-[6px] p-4 hover:border-gray-300 transition-colors">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-semibold text-gray-900">
-                    场景 {scene.id} · {scene.duration}秒
-                  </span>
+                  <div>
+                    <span className="text-xs font-semibold text-gray-900">
+                      场景 {scene.id} · {scene.duration}秒
+                    </span>
+                    {sceneOutlines[scene.id - 1] && (
+                      <span className="ml-2 text-[11px] text-gray-400">结构：{sceneOutlines[scene.id - 1].title}</span>
+                    )}
+                  </div>
                   <div className="flex gap-2">
                     <button
                       type="button"
@@ -703,14 +1026,7 @@ export default function SmartCreatePage() {
         </div>
       )}
 
-      <div className="bg-white border border-gray-200 rounded-[8px] p-4 shadow-sm">
-        <h3 className="text-sm font-semibold text-gray-900 mb-2">使用提示</h3>
-        <ul className="space-y-1 text-xs text-gray-500">
-          <li>建议输入完整广告文案，包括产品卖点、使用场景和转化目标</li>
-          <li>不同时长适合不同节奏：5秒适合快节奏切片，10-12秒适合完整卖点表达</li>
-          <li>生成结果可同步到手工分镜继续调整镜头、提示词和参考图</li>
-        </ul>
-      </div>
+
     </div>
   );
 }
