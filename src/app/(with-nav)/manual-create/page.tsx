@@ -316,7 +316,7 @@ export default function ManualCreatePage() {
           <button
             type="button"
             onClick={handleLoadDemoSession}
-            className="text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-[11px] text-gray-400 hover:text-sky-600 transition-colors"
           >
             加载演示分镜
           </button>
@@ -388,7 +388,7 @@ export default function ManualCreatePage() {
                   document.getElementById(`scene-${scene.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }}
                 className={`flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-[6px] border text-xs transition-colors hover:border-gray-400 ${
-                  isActive ? 'border-gray-900 bg-gray-100' : statusStyle[status]
+                  isActive ? 'border-sky-400 bg-sky-50' : statusStyle[status]
                 }`}
               >
                 <span className="font-semibold text-gray-900">#{scene.id}</span>
@@ -407,8 +407,8 @@ export default function ManualCreatePage() {
         const range = durationRange[scene.duration] || '35-50';
         const isLocked = lockedScenes.has(scene.id);
         return (
-          <div key={scene.id} id={`scene-${scene.id}`} className={`bg-white border-2 rounded-[10px] p-4 shadow-sm transition-all duration-150 hover:border-slate-300 ${
-            activeSceneId === scene.id ? 'border-gray-900' : isLocked ? 'border-gray-300 bg-gray-50' : 'border-gray-200'
+          <div key={scene.id} id={`scene-${scene.id}`} className={`bg-white border rounded-[10px] p-4 shadow-[0_4px_20px_rgba(15,23,42,0.04)] transition-all duration-200 hover:shadow-[0_8px_30px_rgba(15,23,42,0.08)] hover:border-slate-300 ${
+            activeSceneId === scene.id ? 'border-sky-400 bg-sky-50/30' : isLocked ? 'border-gray-300 bg-gray-50' : 'border-gray-200'
           }`}>
             <div className="flex items-center justify-between">
               <button
@@ -527,7 +527,7 @@ export default function ManualCreatePage() {
                         onChange={(e) => updateScene(scene.id, (item) => ({ ...item, dialogue: e.target.value }))}
                         placeholder="输入对白内容…"
                         disabled={isLocked}
-                        className="w-full h-[70px] border border-gray-300 rounded-[6px] p-3 text-sm text-gray-900 placeholder:text-gray-400 resize-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                        className="w-full h-[70px] border border-slate-200 rounded-[8px] p-3 text-sm text-gray-800 placeholder:text-gray-400 resize-none focus:border-sky-400/40 focus:ring-[3px] focus:ring-sky-100/50 focus:ring-offset-0 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed transition-shadow duration-200"
                       />
                       <div className="text-xs text-gray-400 mt-1">{scene.dialogue.length} / 建议 {range}</div>
                     </div>
@@ -594,7 +594,7 @@ export default function ManualCreatePage() {
                               }
                             }}
                             disabled={isLocked}
-                            className="w-full h-10 border border-gray-200 rounded-[4px] px-3 py-2 text-xs text-gray-700 bg-gray-50 resize-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                            className="w-full h-10 border border-slate-200 rounded-[6px] px-3 py-2 text-xs text-gray-700 bg-gray-50 resize-none focus:border-sky-400/40 focus:ring-[3px] focus:ring-sky-100/50 focus:ring-offset-0 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed transition-shadow duration-200"
                           />
                         ) : (
                           <div className="h-10 bg-gray-50 border border-dashed border-gray-300 rounded-[4px] flex items-center justify-center text-xs text-gray-500">

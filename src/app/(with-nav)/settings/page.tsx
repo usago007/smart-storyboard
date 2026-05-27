@@ -119,7 +119,7 @@ function StatusBadge({ status }: { status: ServiceStatus }) {
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-[10px] p-6 shadow-sm">
+    <div className="bg-white border border-slate-200/60 rounded-[10px] p-6 shadow-[0_4px_20px_rgba(15,23,42,0.04)]">
       <h2 className="text-sm font-semibold text-gray-900 mb-4">{title}</h2>
       {children}
     </div>
@@ -131,7 +131,7 @@ export default function SettingsPage() {
 
   return (
     <div className="w-full max-w-[1280px] mx-auto space-y-4">
-      <div className="bg-blue-50 border border-blue-100 rounded-[10px] px-4 py-3 text-[13px] text-blue-700 leading-relaxed">
+      <div className="bg-sky-50/60 border border-sky-100 rounded-[10px] px-4 py-3 text-[13px] text-sky-700 leading-relaxed">
         {language === 'zh'
           ? 'Demo 模式：生成链路使用 mock 数据，真实服务可按配置接入。'
           : 'Demo mode: mock data pipeline. Real services can be configured.'}
@@ -139,7 +139,7 @@ export default function SettingsPage() {
 
       <div className="grid grid-cols-4 gap-3">
         {summaryCards.map((card) => (
-          <div key={card.label} className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
+          <div key={card.label} className="bg-white border border-slate-200/60 rounded-[10px] p-4 shadow-[0_4px_20px_rgba(15,23,42,0.04)]">
             <div className="text-xs text-gray-400">{card.label}</div>
             <div className={`mt-1 ${typeof card.value === 'number' ? 'text-lg font-semibold' : 'flex items-center gap-1.5'}`}>
               {typeof card.value === 'string' && card.value.includes('/') ? (
@@ -159,7 +159,7 @@ export default function SettingsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
+              <tr className="border-b border-slate-200 bg-slate-50">
                 {['接口名称', '路径', '方法', '功能模块', '对接状态'].map((h) => (
                   <th key={h} className="text-left px-3 py-3 font-medium text-gray-600 whitespace-nowrap">{h}</th>
                 ))}
@@ -189,7 +189,7 @@ export default function SettingsPage() {
       <SectionCard title="大模型服务配置">
         <div className="grid grid-cols-2 gap-4">
           {modelCards.map((card) => (
-            <div key={card.name} className="border border-gray-200 rounded-[6px] p-4">
+            <div key={card.name} className="border border-slate-200/60 rounded-[10px] p-4 shadow-[0_2px_12px_rgba(15,23,42,0.03)]">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-semibold text-gray-900">{card.name}</span>
                 <StatusBadge status={card.status} />
@@ -222,7 +222,7 @@ export default function SettingsPage() {
             { label: 'Database', value: dbInfo.database },
             { label: 'User', value: dbInfo.user },
           ].map((f) => (
-            <div key={f.label} className="flex items-center justify-between border border-gray-200 rounded-[6px] px-4 py-2.5">
+            <div key={f.label} className="flex items-center justify-between border border-slate-200/60 rounded-[8px] px-4 py-2.5">
               <span className="text-xs text-gray-400">{f.label}</span>
               <span className="text-xs font-mono text-gray-900">{f.value}</span>
             </div>
@@ -230,7 +230,7 @@ export default function SettingsPage() {
         </div>
         <table className="w-full text-xs">
           <thead>
-            <tr className="border-b border-gray-200 bg-gray-50">
+            <tr className="border-b border-slate-200 bg-slate-50">
               {['表名', '说明', '备注'].map((h) => (
                 <th key={h} className="text-left px-3 py-3 font-medium text-gray-600">{h}</th>
               ))}
@@ -253,7 +253,7 @@ export default function SettingsPage() {
       <SectionCard title="环境变量配置">
         <div className="grid grid-cols-2 gap-3">
           {envVars.map((v) => (
-            <div key={v.key} className="flex items-center justify-between border border-gray-200 rounded-[6px] px-4 py-3">
+            <div key={v.key} className="flex items-center justify-between border border-slate-200/60 rounded-[8px] px-4 py-3">
               <div className="flex flex-col">
                 <span className="text-xs text-gray-900 font-mono">{v.key}</span>
                 <span className="text-[11px] text-gray-400 mt-0.5">{v.desc}</span>
@@ -267,7 +267,7 @@ export default function SettingsPage() {
       <SectionCard title="系统信息">
         <div className="grid grid-cols-2 gap-3">
           {systemInfoItems.map((info) => (
-            <div key={info.key} className="border border-gray-200 rounded-[6px] px-4 py-3 flex items-center justify-between">
+            <div key={info.key} className="border border-slate-200/60 rounded-[8px] px-4 py-3 flex items-center justify-between">
               <span className="text-xs text-gray-400">{info.key}</span>
               <span className="text-xs text-gray-900 font-medium">{info.value}</span>
             </div>
@@ -275,13 +275,11 @@ export default function SettingsPage() {
         </div>
       </SectionCard>
 
-      <div className="bg-slate-50 border border-slate-200 rounded-[10px] p-4">
-        <p className="text-xs text-gray-500 leading-relaxed">
-          {language === 'zh'
-            ? '此页面展示系统基础设施对接状态，所有信息均为只读。服务对接完成后，对应状态将自动更新。'
-            : 'This page displays system infrastructure integration status. All information is read-only. Status updates automatically when services are connected.'}
-        </p>
-      </div>
+      <p className="text-[13px] text-gray-500 text-center">
+        {language === 'zh'
+          ? '基础设施对接状态面板，服务配置完成后状态自动更新。'
+          : 'Infrastructure status panel. Status updates automatically when services are connected.'}
+      </p>
     </div>
   );
 }

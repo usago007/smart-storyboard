@@ -410,13 +410,13 @@ export default function SmartCreatePage() {
         <button
           type="button"
           onClick={handleLoadDemo}
-          className="text-[13px] text-gray-500 hover:text-gray-700 transition-colors whitespace-nowrap"
+          className="text-[13px] text-gray-500 hover:text-sky-600 transition-colors whitespace-nowrap"
         >
           加载演示素材
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-6">
+      <div className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_8px_30px_rgba(15,23,42,0.04)] p-6">
         <div className="flex flex-wrap gap-1.5 mb-4">
           {([
             { id: 'text' as const, label: '手动输入' },
@@ -446,7 +446,7 @@ export default function SmartCreatePage() {
               value={script}
               onChange={(e) => setScript(e.target.value.slice(0, 3000))}
               placeholder="输入广告文案、产品卖点或脚本草稿..."
-              className="w-full h-[200px] border border-gray-200 rounded-xl p-4 text-sm text-gray-800 placeholder:text-gray-400 resize-none focus:border-gray-400 focus:ring-0 leading-relaxed"
+              className="w-full h-[200px] border border-slate-200 rounded-xl p-4 text-sm text-gray-800 placeholder:text-gray-400 resize-none focus:border-sky-400/40 focus:ring-[3px] focus:ring-sky-100/50 focus:ring-offset-0 leading-relaxed transition-shadow duration-200"
             />
             <div className="flex items-center justify-between mt-3">
               <div className="flex items-center gap-4">
