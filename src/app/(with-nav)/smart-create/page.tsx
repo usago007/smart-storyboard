@@ -370,14 +370,19 @@ export default function SmartCreatePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-[28px] font-bold text-gray-900">FatMug 智能分镜</h1>
-        <p className="mt-1 text-sm text-gray-500">将广告文案拆解为镜头脚本、旁白与首尾帧提示词</p>
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-[8px] p-6 shadow-sm">
-        <div className="space-y-6">
+    <div className="space-y-5">
+      <div className="bg-white border border-slate-200 rounded-[10px] p-6 shadow-sm">
+        <p className="text-sm font-semibold text-gray-800 mb-3">将广告文案转换为可编辑的镜头脚本</p>
+        <div className="space-y-5">
+          <div className="flex items-center gap-3 text-xs text-gray-400 pb-3 border-b border-slate-100">
+            <span>输入素材</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+            <span>选择节奏</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+            <span className="text-gray-600 font-medium">生成分镜</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+            <span>同步精修</span>
+          </div>
           <section>
             <h2 className="text-sm font-semibold text-gray-900 mb-3">选择分镜时长</h2>
             <p className="text-xs text-gray-500 mb-3">根据短视频节奏选择单个镜头长度，系统会自动控制每镜旁白密度。</p>

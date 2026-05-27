@@ -8,7 +8,7 @@ An AI-powered advertising storyboard generator that turns ad copy into professio
 
 ## What It Does
 
-### 🎬 Smart Storyboard Generation
+### Smart Storyboard Generation
 Paste ad copy, upload a `.txt` file, dictate with your voice, import from a URL, or pick a template — the generator splits your script into scenes with the right shot duration for short-form video ads (5s / 10s / 12s per shot).
 
 Every scene auto-generates:
@@ -17,15 +17,15 @@ Every scene auto-generates:
 - **First frame prompt** — opening composition, lighting, character performance
 - **Last frame prompt** — closing composition, product placement, transition
 
-### ✍️ Manual Storyboard Editor
+### Manual Storyboard Editor
 Fine-tune every scene by hand. Edit dialogue, shot prompts, and frame descriptions. Lock scenes to prevent accidental edits. Copy full scene specs to clipboard. Delete unwanted scenes with automatic renumbering.
 
 Sync scenes one-by-one or in bulk from Smart Create — all AI-generated content (prompts, frame descriptions, reference images) is preserved.
 
-### 🖼️ Visual Reference Placeholders
+### Visual Reference Placeholders
 Each scene produces first-frame and last-frame reference cards, ready for replacement with real AI-generated images when connected to an image service.
 
-### ⚙️ Infrastructure Dashboard
+### Infrastructure Dashboard
 A read-only settings page that maps out every API route, AI model, database table, and environment variable — designed as a blueprint for connecting real backends.
 
 ---

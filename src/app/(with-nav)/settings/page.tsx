@@ -91,7 +91,7 @@ const systemInfoItems = [
 const statusStyle: Record<ServiceStatus, string> = {
   '待对接': 'text-gray-500 bg-gray-100 border-gray-200',
   '已就绪': 'text-gray-900 bg-gray-200 border-gray-200',
-  '未配置': 'text-red-600 bg-red-50 border-red-200',
+  '未配置': 'text-rose-600 bg-rose-50 border-rose-200',
 };
 
 const summaryCards = [
@@ -119,7 +119,7 @@ function StatusBadge({ status }: { status: ServiceStatus }) {
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-[8px] p-6 shadow-sm">
+    <div className="bg-white border border-slate-200 rounded-[10px] p-6 shadow-sm">
       <h2 className="text-sm font-semibold text-gray-900 mb-4">{title}</h2>
       {children}
     </div>
@@ -130,26 +130,23 @@ export default function SettingsPage() {
   const { language } = useApp();
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-[28px] font-bold text-gray-900">系统配置</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          {language === 'zh'
-            ? '基础设施对接状态一览，展示各服务接入进度与配置信息。'
-            : 'Infrastructure integration overview — track service connection status and configuration.'}
-        </p>
+    <div className="space-y-4">
+      <div className="bg-blue-50 border border-blue-100 rounded-[10px] px-4 py-3 text-xs text-blue-700 leading-relaxed">
+        {language === 'zh'
+          ? '当前为前端 Demo 模式，生成链路使用 mock 数据展示；真实模型、数据库和存储服务可按配置接入。'
+          : 'Running in front-end demo mode. Generation pipeline uses mock data. Real models, databases, and storage services can be connected via configuration.'}
       </div>
 
       <div className="grid grid-cols-4 gap-3">
         {summaryCards.map((card) => (
-          <div key={card.label} className="bg-white border border-gray-200 rounded-[8px] p-4">
+          <div key={card.label} className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
             <div className="text-xs text-gray-400">{card.label}</div>
             <div className={`mt-1 ${typeof card.value === 'number' ? 'text-lg font-semibold' : 'flex items-center gap-1.5'}`}>
               {typeof card.value === 'string' && card.value.includes('/') ? (
                 <span className="text-lg font-semibold text-gray-900">{card.value}</span>
               ) : (
                 <>
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
                   <span className="text-sm font-medium text-gray-900">{card.value}</span>
                 </>
               )}
@@ -278,7 +275,7 @@ export default function SettingsPage() {
         </div>
       </SectionCard>
 
-      <div className="bg-gray-50 border border-gray-200 rounded-[8px] p-4">
+      <div className="bg-slate-50 border border-slate-200 rounded-[10px] p-4">
         <p className="text-xs text-gray-500 leading-relaxed">
           {language === 'zh'
             ? '此页面展示系统基础设施对接状态，所有信息均为只读。服务对接完成后，对应状态将自动更新。'

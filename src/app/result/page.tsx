@@ -118,7 +118,7 @@ function SceneCard({
   imageLoading: Record<string, boolean>;
 }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-[8px] p-6 shadow-sm">
+    <div className="bg-white border border-slate-200 rounded-[10px] p-6 shadow-sm">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">{scene.name}</h2>
@@ -314,7 +314,7 @@ export default function ResultPage() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white border border-gray-200 rounded-[8px] p-6 shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-[10px] p-6 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">

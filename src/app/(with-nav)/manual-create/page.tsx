@@ -56,6 +56,7 @@ export default function ManualCreatePage() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [lockedScenes, setLockedScenes] = useState<Set<number>>(new Set());
+  const [activeSceneId, setActiveSceneId] = useState<number | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -217,9 +218,25 @@ export default function ManualCreatePage() {
         return next;
       });
 
+      setActiveSceneId(null);
+
       return { ...current, scenes: renumbered };
     });
   }, []);
+
+  const handleClearAll = useCallback(() => {
+    if (!session) return;
+    const hasLocked = session.scenes.some((s) => lockedScenes.has(s.id));
+    if (hasLocked) {
+      showToast('存在锁定分镜，请先解锁后再清空', 'error');
+      return;
+    }
+    if (!window.confirm('确定清空所有分镜吗？此操作不可恢复。')) return;
+    setSession((current) => (current ? { ...current, scenes: [] } : current));
+    setExpanded(new Set());
+    setLockedScenes(new Set());
+    setActiveSceneId(null);
+  }, [session, lockedScenes, showToast]);
 
   const handleCopyFullScene = useCallback(async (scene: Scene) => {
     const text = [
@@ -249,19 +266,46 @@ export default function ManualCreatePage() {
   const totalChars = session.scenes.reduce((sum, s) => sum + s.dialogue.length, 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-base font-semibold text-gray-900 text-center flex-1">
-          手工创建分镜 · {session.scenes.length} 个
-        </h1>
-        <span className="text-xs text-gray-400">{session.duration}秒 {totalChars}字</span>
+    <div className="space-y-4">
+      <div className="flex items-start justify-between">
+        <div>
+          <span className="text-sm font-semibold text-gray-900">
+            手工创建分镜 · {session.scenes.length} 个
+          </span>
+          <p className="text-xs text-gray-400 mt-0.5">用于校正 AI 初稿，精修镜头表达、首尾帧提示词和参考图。</p>
+        </div>
+        <div className="flex items-center gap-3 pt-0.5">
+          <span className="text-xs text-gray-400">{session.duration}秒 {totalChars}字</span>
+          {session.scenes.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setExpanded(new Set(session.scenes.map((s) => s.id)))}
+                className="text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                全部展开
+              </button>
+              <button
+                type="button"
+                onClick={() => setExpanded(new Set())}
+                className="text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                全部收起
+              </button>
+              <button
+                type="button"
+                onClick={handleClearAll}
+                className="text-[11px] text-gray-400 hover:text-red-600 transition-colors"
+              >
+                清空全部
+              </button>
+            </>
+          )}
+        </div>
       </div>
-      <p className="text-xs text-gray-400 text-center -mt-4">
-        用于校正 AI 初稿，精修镜头表达、首尾帧提示词和参考图。
-      </p>
 
       {session.scenes.length === 0 && (
-        <div className="bg-white border border-gray-200 rounded-[8px] p-10 shadow-sm flex flex-col items-center text-center">
+        <div className="bg-white border border-slate-200 rounded-[10px] p-10 shadow-sm flex flex-col items-center text-center">
           <h3 className="text-base font-semibold text-gray-900 mb-2">暂无分镜</h3>
           <p className="text-sm text-gray-500 max-w-[300px] mb-6">
             可以从智能分镜同步生成结果，也可以手动添加一个分镜。
@@ -277,26 +321,32 @@ export default function ManualCreatePage() {
       )}
 
       {session.scenes.length > 0 && (
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
-        {session.scenes.map((scene) => {
-          const status = getSceneStatus(scene, lockedScenes);
-          return (
-            <button
-              key={scene.id}
-              type="button"
-              onClick={() => {
-                document.getElementById(`scene-${scene.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }}
-              className={`flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-[6px] border text-xs transition-colors hover:border-gray-400 ${statusStyle[status]}`}
-            >
-              <span className="font-semibold text-gray-900">#{scene.id}</span>
-              <span className="text-gray-400">{scene.duration}s</span>
-              <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded-full ${status === '待填写' ? 'text-gray-300' : status === '已生成' ? 'text-gray-600 bg-gray-100' : status === '已锁定' ? 'text-gray-500 bg-gray-200' : 'text-amber-600 bg-amber-50'}`}>
-                {statusLabel[status]}
-              </span>
-            </button>
-          );
-        })}
+      <div className="flex items-start gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-2 flex-1">
+          {session.scenes.map((scene) => {
+            const status = getSceneStatus(scene, lockedScenes);
+            const isActive = activeSceneId === scene.id;
+            return (
+              <button
+                key={scene.id}
+                type="button"
+                onClick={() => {
+                  setActiveSceneId(scene.id);
+                  document.getElementById(`scene-${scene.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+                className={`flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-[6px] border text-xs transition-colors hover:border-gray-400 ${
+                  isActive ? 'border-gray-900 bg-gray-100' : statusStyle[status]
+                }`}
+              >
+                <span className="font-semibold text-gray-900">#{scene.id}</span>
+                <span className="text-gray-400">{scene.duration}s</span>
+                <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded-full ${status === '待填写' ? 'text-gray-300' : status === '已生成' ? 'text-gray-600 bg-gray-100' : status === '已锁定' ? 'text-gray-500 bg-gray-200' : 'text-amber-600 bg-amber-50'}`}>
+                  {statusLabel[status]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
       )}
 
@@ -304,7 +354,9 @@ export default function ManualCreatePage() {
         const range = durationRange[scene.duration] || '35-50';
         const isLocked = lockedScenes.has(scene.id);
         return (
-          <div key={scene.id} id={`scene-${scene.id}`} className={`bg-white border rounded-[8px] p-4 shadow-sm transition-colors hover:border-gray-300 ${isLocked ? 'border-gray-300 bg-gray-50' : 'border-gray-200'}`}>
+          <div key={scene.id} id={`scene-${scene.id}`} className={`bg-white border-2 rounded-[10px] p-4 shadow-sm transition-all duration-150 hover:border-slate-300 ${
+            activeSceneId === scene.id ? 'border-gray-900' : isLocked ? 'border-gray-300 bg-gray-50' : 'border-gray-200'
+          }`}>
             <div className="flex items-center justify-between">
               <button
                 type="button"
@@ -492,7 +544,7 @@ export default function ManualCreatePage() {
                             className="w-full h-10 border border-gray-200 rounded-[4px] px-3 py-2 text-xs text-gray-700 bg-gray-50 resize-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                           />
                         ) : (
-                          <div className="h-10 bg-gray-50 rounded-[4px] flex items-center justify-center text-xs text-gray-400">
+                          <div className="h-10 bg-gray-50 border border-dashed border-gray-300 rounded-[4px] flex items-center justify-center text-xs text-gray-500">
                             {area.key === 'shotPrompt' ? '点击生成镜头提示词' : area.key === 'firstFramePrompt' ? '点击生成首帧提示词' : '点击生成尾帧提示词'}
                           </div>
                         )}
@@ -529,7 +581,7 @@ export default function ManualCreatePage() {
                             {area.key === 'firstFrameImage' ? '首帧参考图已生成' : '尾帧参考图已生成'}
                           </div>
                         ) : (
-                          <div className="h-12 bg-gray-50 rounded-[4px] flex items-center justify-center text-xs text-gray-400">
+                          <div className="h-12 bg-gray-50 border border-dashed border-gray-300 rounded-[4px] flex items-center justify-center text-xs text-gray-500">
                             {area.key === 'firstFrameImage' ? '点击生成首帧参考图' : '点击生成尾帧参考图'}
                           </div>
                         )}
