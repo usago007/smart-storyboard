@@ -300,8 +300,6 @@ export default function ManualCreatePage() {
     );
   }
 
-  const totalChars = session.scenes.reduce((sum, s) => sum + s.dialogue.length, 0);
-
   return (
     <div className="w-full max-w-[1280px] mx-auto space-y-4">
       <div className="flex items-start justify-between">
@@ -311,12 +309,11 @@ export default function ManualCreatePage() {
           </span>
           <p className="text-[13px] text-gray-500 mt-0.5">校正 AI 初稿，精修提示词与参考图。</p>
         </div>
-        <div className="flex items-center gap-3 pt-0.5">
-          <span className="text-[13px] text-gray-500">{session.duration}秒 {totalChars}字</span>
+        <div className="flex items-center gap-2 pt-0.5">
           <button
             type="button"
             onClick={handleLoadDemoSession}
-            className="text-[11px] text-gray-400 hover:text-sky-600 transition-colors"
+            className="h-8 px-3 rounded-[8px] text-[13px] font-medium border border-slate-200 text-gray-600 bg-white hover:bg-slate-50 hover:text-sky-600 transition-colors"
           >
             加载演示分镜
           </button>
@@ -325,21 +322,21 @@ export default function ManualCreatePage() {
               <button
                 type="button"
                 onClick={() => setExpanded(new Set(session.scenes.map((s) => s.id)))}
-                className="text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
+                className="h-8 px-2.5 rounded-[8px] text-[13px] text-gray-600 hover:bg-slate-100 transition-colors"
               >
                 全部展开
               </button>
               <button
                 type="button"
                 onClick={() => setExpanded(new Set())}
-                className="text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
+                className="h-8 px-2.5 rounded-[8px] text-[13px] text-gray-600 hover:bg-slate-100 transition-colors"
               >
                 全部收起
               </button>
               <button
                 type="button"
                 onClick={handleClearAll}
-                className="text-[11px] text-gray-400 hover:text-red-600 transition-colors"
+                className="h-8 px-2.5 rounded-[8px] text-[13px] text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
               >
                 清空全部
               </button>
@@ -439,8 +436,8 @@ export default function ManualCreatePage() {
                   type="button"
                   onClick={() => handleCopyFullScene(scene)}
                   disabled={isLocked}
-                  className={`text-[11px] px-2 pr-2.5 py-1 rounded-[4px] border transition-colors flex items-center gap-1 ${
-                    isLocked ? 'border-gray-200 text-gray-300 cursor-not-allowed' : 'border-gray-200 text-gray-400 hover:bg-gray-50'
+                  className={`h-[30px] px-2.5 rounded-[8px] text-[13px] border transition-colors flex items-center gap-1 ${
+                    isLocked ? 'border-slate-200 text-slate-300 cursor-not-allowed' : 'border-slate-200 text-gray-600 bg-white hover:bg-slate-50'
                   }`}
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -455,8 +452,8 @@ export default function ManualCreatePage() {
                       type="button"
                       onClick={() => handleGenerateAll(scene)}
                       disabled={isLocked}
-                      className={`text-xs px-2.5 py-1 rounded-[4px] transition-colors ${
-                        isLocked ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-100'
+                      className={`h-[30px] px-3 rounded-[8px] text-[13px] font-medium transition-colors ${
+                        isLocked ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-gray-800'
                       }`}
                     >
                       生成全部
@@ -465,8 +462,8 @@ export default function ManualCreatePage() {
                       type="button"
                       onClick={() => handleRegenerate(scene)}
                       disabled={isLocked}
-                      className={`text-xs px-2.5 py-1 rounded-[4px] transition-colors ${
-                        isLocked ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-100'
+                      className={`h-[30px] px-2.5 rounded-[8px] text-[13px] transition-colors ${
+                        isLocked ? 'text-slate-300 cursor-not-allowed' : 'text-gray-600 hover:bg-slate-100'
                       }`}
                     >
                       重新生成
@@ -476,8 +473,8 @@ export default function ManualCreatePage() {
                 <button
                   type="button"
                   onClick={() => handleToggleLock(scene.id)}
-                  className={`text-xs px-2.5 py-1 rounded-[4px] transition-colors ${
-                    isLocked ? 'bg-gray-200 text-gray-600' : 'text-gray-400 hover:bg-gray-50'
+                  className={`h-[30px] px-2.5 rounded-[8px] text-[13px] transition-colors ${
+                    isLocked ? 'bg-slate-100 text-gray-600' : 'text-gray-600 hover:bg-slate-100'
                   }`}
                 >
                   {isLocked ? '解锁' : '锁定'}
@@ -486,8 +483,8 @@ export default function ManualCreatePage() {
                   type="button"
                   onClick={() => handleDeleteScene(scene.id)}
                   disabled={isLocked}
-                  className={`text-xs px-2.5 py-1 rounded-[4px] transition-colors ${
-                    isLocked ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                  className={`h-[30px] px-2.5 rounded-[8px] text-[13px] transition-colors ${
+                    isLocked ? 'text-slate-300 cursor-not-allowed' : 'text-gray-500 hover:text-red-600 hover:bg-red-50'
                   }`}
                 >
                   删除
@@ -541,12 +538,12 @@ export default function ManualCreatePage() {
                             type="button"
                             disabled={isLocked}
                             onClick={() => updateScene(scene.id, (item) => ({ ...item, duration: dur }))}
-                            className={`h-[34px] px-3 rounded-[6px] text-sm transition-colors ${
+                            className={`h-[30px] px-3 rounded-[8px] text-[13px] font-medium transition-colors ${
                               isLocked
-                                ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                                ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
                                 : scene.duration === dur
                                   ? 'bg-gray-900 text-white'
-                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                  : 'bg-slate-100 text-gray-600 hover:bg-slate-200'
                             }`}
                           >
                             {dur}秒分镜
@@ -572,10 +569,10 @@ export default function ManualCreatePage() {
                             type="button"
                             onClick={() => handleGenerate(scene, area.key)}
                             disabled={isLocked}
-                            className={`h-7 px-2.5 rounded-[4px] text-[11px] border transition-colors ${
+                            className={`h-[26px] px-2 rounded-[6px] text-[12px] border transition-colors ${
                               isLocked
-                                ? 'border-gray-200 text-gray-300 cursor-not-allowed'
-                                : 'border-gray-200 text-gray-400 hover:bg-gray-50'
+                                ? 'border-slate-200 text-slate-300 cursor-not-allowed'
+                                : 'border-slate-200 text-slate-500 bg-white hover:text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                             }`}
                           >
                             生成
@@ -625,10 +622,10 @@ export default function ManualCreatePage() {
                               type="button"
                               onClick={() => handleGenerate(scene, area.key)}
                               disabled={isLocked}
-                              className={`text-[11px] px-2 py-0.5 rounded-[4px] border transition-colors ${
+                              className={`h-[26px] px-2 rounded-[6px] text-[12px] border transition-colors ${
                                 isLocked
-                                  ? 'border-gray-200 text-gray-300 cursor-not-allowed'
-                                  : 'border-gray-200 text-gray-400 hover:bg-gray-50'
+                                  ? 'border-slate-200 text-slate-300 cursor-not-allowed'
+                                  : 'border-slate-200 text-slate-500 bg-white hover:text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                               }`}
                             >
                               生成
