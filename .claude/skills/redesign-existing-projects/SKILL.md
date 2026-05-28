@@ -1,0 +1,1 @@
+/Users/admin/Dev/smart-storyboard/ad-script-splitter/.agents/skills/redesign-existing-projects/SKILL.md

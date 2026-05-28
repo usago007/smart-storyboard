@@ -76,13 +76,21 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const router = useRouter();
 
-  const current = pageHeaders[pathname] || { label: '', icon: null };
+  const current = Object.entries(pageHeaders).find(([key]) =>
+    pathname.startsWith(key)
+  )?.[1] || { label: '', icon: null };
 
   return (
     <div className="flex h-screen bg-slate-50">
       <aside className="w-[224px] flex-shrink-0 bg-white border-r border-slate-200 flex flex-col">
         <div className="h-14 flex items-center px-5 border-b border-slate-100">
-          <h1 className="text-xl font-bold tracking-[-0.02em] text-gray-900">FatMug</h1>
+          <button
+            type="button"
+            onClick={() => router.push('/smart-create/')}
+            className="text-xl font-bold tracking-[-0.02em] text-gray-900 hover:text-gray-600 transition-colors"
+          >
+            FatMug
+          </button>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-0.5">
           {navItems.map((item) => {

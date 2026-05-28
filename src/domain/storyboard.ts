@@ -59,6 +59,74 @@ export interface AppSettings {
   mockFailureRate: number;
   language: Language;
   theme: Theme;
+  llm: LLMConfig;
+  imageGen: ImageGenConfig;
+  prompts: PromptTemplatesConfig;
+  dataPolicy: DataPolicyConfig;
+  brand: BrandConfig;
+  security: SecurityConfig;
+}
+
+export interface LLMConfig {
+  baseUrl: string;
+  apiKey: string;
+  provider: string;
+  tasks: Record<string, ModelTaskConfig>;
+}
+
+export interface ModelTaskConfig {
+  model: string;
+  temperature: number;
+  maxTokens: number;
+  topP: number;
+  stream: boolean;
+}
+
+export interface ImageGenConfig {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  genWidth: number;
+  genHeight: number;
+  outputWidth: number;
+  outputHeight: number;
+  colorMode: 'grayscale' | 'color';
+  styleDescription: string;
+  negativePrompt: string;
+  storageMode: 'base64' | 's3';
+  watermark: boolean;
+}
+
+export interface PromptTemplatesConfig {
+  sceneLabels: string[];
+  shotPromptTemplate: string;
+  dialogueTruncationShot: number;
+  dialogueTruncationFrame: number;
+  firstFrameTemplate: FramePrompt;
+  lastFrameTemplate: FramePrompt;
+}
+
+export interface DataPolicyConfig {
+  sessionTtlHours: number;
+  imageCacheTtlHours: number;
+  cleanupIntervalMinutes: number;
+  maxSessionsPerUser: number;
+  exportFormat: 'json' | 'pdf' | 'ppt';
+  exportImageResolution: '1x' | '2x' | 'original';
+  exportFields: string[];
+}
+
+export interface BrandConfig {
+  appName: string;
+  defaultLanguage: Language;
+  defaultTheme: Theme;
+}
+
+export interface SecurityConfig {
+  sessionSecret: string;
+  rateLimitRpm: number;
+  maxConcurrentImageGen: number;
+  corsOrigins: string;
 }
 
 export interface GenerateFrameInput {

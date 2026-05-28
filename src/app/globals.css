@@ -1,32 +1,104 @@
 @import "tailwindcss";
 
+/* ── Typography ── */
+
 body {
-  background: radial-gradient(circle at 50% 0%, rgba(56,189,248,0.06), transparent 40%), #f8fafc;
+  background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.06), transparent 40%), #f8fafc;
   color: #0f172a;
   font-family: var(--font-geist-sans), ui-sans-serif, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-wrap: pretty;
 }
 
-h1, h2, h3 {
+h1, h2, h3, h4 {
   text-wrap: balance;
+  letter-spacing: -0.015em;
 }
 
-textarea:focus, input[type="text"]:focus, input[type="url"]:focus {
+/* Headline scale */
+h1 { font-size: 1.5rem; font-weight: 600; }
+h2 { font-size: 1.125rem; font-weight: 600; }
+h3 { font-size: 0.9375rem; font-weight: 600; }
+
+/* Mono elements */
+code, pre, kbd, samp,
+.font-mono, [class*="font-mono"],
+input[type="number"] {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-feature-settings: "tnum";
+}
+
+/* Tabular figures for data */
+[data-tabular] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Interactive States ── */
+
+/* Smooth transitions for all interactive elements */
+button, a, input, textarea, select {
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+/* Focus ring - visible only for keyboard nav (buttons, links, etc.) */
+:focus-visible {
+  outline: 2px solid rgba(14, 165, 233, 0.5);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Inputs have their own focus style — don't double-ring */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
   outline: none;
-  border-color: rgba(14,165,233,0.35);
-  box-shadow: 0 0 0 3px rgba(14,165,233,0.12);
 }
 
-input:disabled, textarea:disabled {
+/* Suppress focus ring for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Consistent disabled cursor */
+button:disabled, input:disabled, textarea:disabled {
   cursor: not-allowed;
 }
+
+/* Input/textarea focus */
+textarea:focus, input[type="text"]:focus, input[type="url"]:focus, input:not([type="button"]):not([type="submit"]):not([type="range"]):focus {
+  outline: none;
+  border-color: rgba(14, 165, 233, 0.35);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12);
+}
+
+/* Button press feedback (overridden by explicit Tailwind active:scale-*) */
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active {
+  transform: scale(0.98);
+}
+
+/* Ghost / text-only buttons no outline offset */
+button[class*="text-"]:focus-visible:not([class*="bg-"]),
+a:focus-visible:not([class*="bg-"]) {
+  outline-offset: 1px;
+}
+
+/* ── Scroll ── */
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Dark Mode ── */
 
 .dark body,
 :root.dark body {
   background: #111827;
   color: #f3f4f6;
 }
+
+/* ── Mobile ── */
 
 @media (max-width: 640px) {
   button, [role="button"] {

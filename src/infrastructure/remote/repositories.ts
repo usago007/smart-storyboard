@@ -1,6 +1,6 @@
 import type { AppSettings, SessionType, StoryboardSession } from '@/domain/storyboard';
 import type { ISessionRepository, ISettingsRepository } from '@/infrastructure/repository-interfaces';
-import { getRuntimeDataMode } from '@/shared/runtime-config';
+import { DEFAULT_APP_SETTINGS, getRuntimeDataMode } from '@/shared/runtime-config';
 import { getDb } from './db';
 import { sessions, settings } from './schema';
 import { eq, and } from 'drizzle-orm';
@@ -27,12 +27,17 @@ export class SqliteSettingsRepository implements ISettingsRepository {
       .from(settings)
       .where(eq(settings.token, token));
 
+    const dbValues = row ? {
+      language: (row.language as AppSettings['language']) || DEFAULT_APP_SETTINGS.language,
+      theme: (row.theme as AppSettings['theme']) || DEFAULT_APP_SETTINGS.theme,
+      mockDelayMs: row.mockDelayMs,
+      mockFailureRate: row.mockFailureRate,
+    } : {};
+
     return {
+      ...DEFAULT_APP_SETTINGS,
+      ...dbValues,
       dataMode: getRuntimeDataMode(),
-      mockDelayMs: row?.mockDelayMs ?? 600,
-      mockFailureRate: row?.mockFailureRate ?? 0,
-      language: (row?.language as AppSettings['language']) || 'zh',
-      theme: (row?.theme as AppSettings['theme']) || 'light',
     };
   }
 
