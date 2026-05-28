@@ -307,7 +307,6 @@ export default function ManualCreatePage() {
           <span className="text-base font-semibold text-gray-900">
             手工创建分镜 · {session.scenes.length} 个
           </span>
-          <p className="text-[13px] text-gray-500 mt-0.5">校正 AI 初稿，精修提示词与参考图。</p>
         </div>
         <div className="flex items-center gap-2 pt-0.5">
           <button
@@ -384,13 +383,13 @@ export default function ManualCreatePage() {
                   setActiveSceneId(scene.id);
                   document.getElementById(`scene-${scene.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }}
-                className={`flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-[6px] border text-xs transition-colors hover:border-gray-400 ${
-                  isActive ? 'border-sky-400 bg-sky-50' : statusStyle[status]
+                className={`flex-shrink-0 flex items-center gap-2 h-8 px-3 rounded-full text-[13px] font-medium transition-colors ${
+                  isActive ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                <span className="font-semibold text-gray-900">#{scene.id}</span>
-                <span className="text-gray-400">{scene.duration}s</span>
-                <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded-full ${status === '待填写' ? 'text-gray-300' : status === '已生成' ? 'text-gray-600 bg-gray-100' : status === '已锁定' ? 'text-gray-500 bg-gray-200' : 'text-amber-600 bg-amber-50'}`}>
+                <span>#{scene.id}</span>
+                <span className="opacity-60">{scene.duration}s</span>
+                <span className={`text-[12px] px-2 py-0.5 rounded-full ${status === '待填写' ? 'text-gray-400 bg-white/50' : status === '已生成' ? 'text-gray-600 bg-white/60' : status === '已锁定' ? 'text-gray-500 bg-white/50' : 'text-amber-600 bg-amber-50/60'}`}>
                   {statusLabel[status]}
                 </span>
               </button>
@@ -495,8 +494,8 @@ export default function ManualCreatePage() {
             {expanded.has(scene.id) && (
               <div className="mt-4 space-y-4">
                 <div>
-                  <h3 className="text-xs font-medium text-gray-400 mb-2">基础内容</h3>
-                  <div className="space-y-3">
+                  <h3 className="text-[13px] font-medium text-gray-500 mb-3">基础内容</h3>
+                  <div className="space-y-3.5">
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="text-xs font-medium text-gray-700">对白</span>
@@ -555,7 +554,7 @@ export default function ManualCreatePage() {
                 </div>
 
                 <div>
-                  <h3 className="text-xs font-medium text-gray-400 mb-2">AI 提示词</h3>
+                  <h3 className="text-[13px] font-medium text-gray-500 mb-3">AI 提示词</h3>
                   <div className="space-y-3">
                     {[
                       { key: 'shotPrompt', label: '镜头提示词', content: scene.shotPrompt },
@@ -604,7 +603,7 @@ export default function ManualCreatePage() {
                 </div>
 
                 <div>
-                  <h3 className="text-xs font-medium text-gray-400 mb-3">视觉参考</h3>
+                  <h3 className="text-[13px] font-medium text-gray-500 mb-3">视觉参考</h3>
                   <div className="grid grid-cols-2 gap-4">
                     {([
                       { key: 'firstFrameImage' as const, label: '首帧参考图', frameType: 'first' as const },

@@ -155,7 +155,6 @@ export default function SmartCreatePage() {
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [showResults, setShowResults] = useState(false);
   const [generatedScenes, setGeneratedScenes] = useState<Scene[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [syncedIds, setSyncedIds] = useState<Set<number>>(new Set());
@@ -171,7 +170,6 @@ export default function SmartCreatePage() {
   const [selectedScenario, setSelectedScenario] = useState<ScenarioType>('douyin');
   const [selectedObjective, setSelectedObjective] = useState<ObjectiveType>('conversion');
   const [selectedStyle, setSelectedStyle] = useState<StyleType>('commercial');
-  const [showBriefDetail, setShowBriefDetail] = useState(false);
   const { showToast } = useToast();
 
   const recognitionRef = useRef<SpeechRecognition | null>(null) as React.MutableRefObject<SpeechRecognition | null>;
@@ -475,18 +473,10 @@ export default function SmartCreatePage() {
   }
 
   return (
-    <div className="w-full max-w-[1180px] mx-auto space-y-6">
+    <div className="w-full max-w-[1280px] mx-auto space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-base font-semibold text-gray-900">将广告文案转换为可编辑的镜头脚本</p>
-          <p className="text-[13px] text-gray-500 mt-1">输入素材后，系统会生成可确认的创意方案。</p>
-          <div className="flex items-center gap-1.5 text-[13px] mt-2">
-            <span className={`px-2 py-0.5 rounded-full ${currentStep === 'input' && !scenesGenerated ? 'bg-gray-100 text-gray-800 font-medium' : 'text-gray-400'}`}>1 任务与素材</span>
-            <span className="text-gray-300">→</span>
-            <span className={`px-2 py-0.5 rounded-full ${currentStep === 'brief' && !scenesGenerated ? 'bg-gray-100 text-gray-800 font-medium' : 'text-gray-400'}`}>2 方案确认</span>
-            <span className="text-gray-300">→</span>
-            <span className={`px-2 py-0.5 rounded-full ${scenesGenerated ? 'bg-gray-100 text-gray-800 font-medium' : 'text-gray-400'}`}>3 分镜结果</span>
-          </div>
+          <p className="text-base font-semibold text-gray-900">将广告创意转化为分镜脚本</p>
         </div>
         <button
           type="button"
@@ -503,8 +493,6 @@ export default function SmartCreatePage() {
       {currentStep === 'input' && (
       <div>
       <div className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_8px_30px_rgba(15,23,42,0.04)] p-6">
-        <p className="text-sm font-semibold text-gray-900 mb-1">先输入你的素材</p>
-        <p className="text-[13px] text-gray-500 mb-3">输入广告文案、产品卖点、口播草稿、品牌介绍或创意想法，系统会先生成创意方案。</p>
         <div className="flex flex-wrap gap-1.5 mb-4">
           {([
             { id: 'text' as const, label: '手动输入' },
@@ -534,7 +522,7 @@ export default function SmartCreatePage() {
               value={script}
               onChange={(e) => setScript(e.target.value.slice(0, 3000))}
               placeholder="输入你的素材，例如产品卖点、广告文案、口播草稿、品牌介绍或创意想法..."
-              className="w-full h-[200px] border border-slate-200 rounded-xl p-4 text-sm text-gray-800 placeholder:text-gray-400 resize-none focus:border-sky-400/40 focus:ring-[3px] focus:ring-sky-100/50 focus:ring-offset-0 leading-relaxed transition-shadow duration-200"
+              className="w-full h-[260px] border border-slate-200 rounded-xl p-4 text-sm text-gray-800 placeholder:text-gray-400 resize-none focus:border-sky-400/40 focus:ring-[3px] focus:ring-sky-100/50 focus:ring-offset-0 leading-relaxed transition-shadow duration-200"
             />
             <div className="flex items-center justify-between mt-3">
               <div className="flex items-center gap-4">
@@ -662,8 +650,7 @@ export default function SmartCreatePage() {
         (() => { const active = (isAlternativeBrief && alternativeBrief) || storyboardBrief!; return (
       <>
       <div className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_8px_30px_rgba(15,23,42,0.04)] p-6">
-        <p className="text-[15px] font-semibold text-gray-900 mb-1">创意方案确认</p>
-        <p className="text-[13px] text-gray-500 mb-5">请确认以下生成方向。确认后将在下方生成可编辑分镜。</p>
+        <p className="text-[15px] font-semibold text-gray-900 mb-4">创意方案确认</p>
 
         <div className="flex flex-wrap gap-2 mb-5">
           <span className="px-2.5 py-1 rounded-full bg-slate-100 text-[12px] text-gray-600">素材识别：{getMaterialLabel(active.materialType)}</span>
@@ -671,9 +658,9 @@ export default function SmartCreatePage() {
           <span className="px-2.5 py-1 rounded-full bg-slate-100 text-[12px] text-gray-600">建议镜头：{active.sceneCount} 镜 · {active.duration}s/镜</span>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div>
-            <h3 className="text-[13px] font-medium text-gray-500 mb-2">创作方向</h3>
+            <h3 className="text-[13px] font-medium text-gray-500 mb-2.5">创作方向</h3>
             <div className="space-y-3">
               <div><span className="text-[12px] text-gray-400">创作目标</span>
                 <p className="text-sm text-gray-800 mt-0.5 leading-relaxed">{active.objective}</p></div>
@@ -706,7 +693,7 @@ export default function SmartCreatePage() {
             type="button"
             onClick={() => {
               if (scenesGenerated) {
-                if (!window.confirm('返回修改素材会清空当前生成的分镜结果，是否继续？')) return;
+                if (!window.confirm('返回修改会清空当前生成的分镜结果，是否继续？')) return;
                 setScenesGenerated(false);
                 setGeneratedScenes([]);
                 setSyncedIds(new Set());
@@ -715,7 +702,7 @@ export default function SmartCreatePage() {
             }}
             className="h-9 px-4 rounded-lg text-sm font-medium text-gray-600 border border-slate-200 hover:bg-slate-50 transition-colors"
           >
-            返回修改素材
+            返回修改
           </button>
           <button
             type="button"
@@ -748,7 +735,7 @@ export default function SmartCreatePage() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-gray-900">生成的分镜结果</p>
-            <p className="text-[13px] text-gray-500 mt-0.5">可直接修改下方文案与提示词，确认后同步到手工分镜继续精修。</p>
+
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={handleSyncAllToManual}
@@ -782,9 +769,9 @@ export default function SmartCreatePage() {
                   </button>
                 </div>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-3.5">
                 <div>
-                  <span className="text-[12px] font-medium text-gray-500 mb-1 block">画面描述</span>
+                  <span className="text-[12px] font-medium text-gray-500 mb-1.5 block">画面描述</span>
                   <textarea value={isDemoResult ? DEMO_SCENE_DESCRIPTIONS[scene.id] || '' : ''} onChange={(e) => updateResultScene(scene.id, 'dialogue', e.target.value)}
                     className="w-full rounded-[8px] border border-slate-200 bg-white px-3 py-2 text-sm text-gray-800 resize-none hover:border-slate-300 focus:border-sky-400/40 focus:ring-[3px] focus:ring-sky-100/50 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed" rows={2} />
                 </div>
@@ -821,11 +808,7 @@ export default function SmartCreatePage() {
         </div>
       )}
 
-      {!scenesGenerated && (
-      <p className="text-[13px] text-gray-500 text-center">系统会先生成创意方案，确认后再生成可编辑分镜。</p>
-      )}
-
-      {loading && !showResults && (
+      {loading && !scenesGenerated && (
         <div className="bg-white border border-gray-200 rounded-[8px] p-6 shadow-sm animate-pulse space-y-3">
           <div className="h-4 bg-gray-200 rounded w-1/3" />
           <div className="h-16 bg-gray-100 rounded-[6px]" />

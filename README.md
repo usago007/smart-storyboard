@@ -1,32 +1,55 @@
 # FatMug — Smart Storyboard
 
-An AI-powered advertising storyboard generator that turns ad copy into professional shot-by-shot breakdowns — entirely in the browser. No backend, no API keys, no database.
+An AI-powered storyboard generator that turns advertising ideas into professional shot-by-shot breakdowns. Runs entirely in the browser with no backend, no API keys, and no database.
 
 **[Live Demo](https://usago007.github.io/smart-storyboard/)**
 
 ---
 
-## What It Does
+## Use Cases
+
+### Ad Creative to Storyboard
+Input an ad script or product description. The system analyzes the material, generates a creative brief with content type, target audience, core message, and visual style. Confirm the brief and receive a complete storyboard with shot prompts, frame descriptions, and dialogue.
+
+### Product Launch Video Planning
+Describe a product and its selling points. Get a structured storyboard that maps each feature to a specific shot — from pain point introduction through product reveal to call to action.
+
+### Short-Form Content Production
+Generate shot-by-shot breakdowns optimized for 5s, 10s, or 12s segments — ideal for TikTok, Instagram Reels, YouTube Shorts, or in-feed advertising.
+
+### Brand Storytelling
+Transform brand values and positioning into visual narratives with structured shot sequences, camera direction, and frame composition guidance.
+
+---
+
+## Features
 
 ### Smart Storyboard Generation
-Paste ad copy, upload a `.txt` file, dictate with your voice, import from a URL, or pick a template — the generator splits your script into scenes with the right shot duration for short-form video ads (5s / 10s / 12s per shot).
+Five input methods: manual text entry, file upload (`.txt`), voice dictation, URL content extraction, and preset templates. The system detects material type (ad copy, product info, talking script, brand intro) and automatically generates a creative brief with content analysis, target audience, and visual direction.
 
-Every scene auto-generates:
+### Creative Brief Confirmation
+Before scenes are generated, you review and confirm a read-only brief that shows: material recognition, content type, suggested shot count, creative objective, target audience, core message, video structure, and visual style. This prevents raw text from being directly converted into shots without direction.
 
-- **Shot prompt** — camera direction for the full scene
-- **First frame prompt** — opening composition, lighting, character performance
-- **Last frame prompt** — closing composition, product placement, transition
+### Inline Scene Editing
+Generated scenes appear below the brief — all fields are editable. Modify dialogue, shot prompts, and frame descriptions directly in the result cards. Changes are preserved when syncing to the manual editor.
+
+### Dual Brief Switching
+Switch between a default creative brief and an alternative version with a different narrative structure — useful for A/B testing creative directions before generating final scenes.
 
 ### Manual Storyboard Editor
-Fine-tune every scene by hand. Edit dialogue, shot prompts, and frame descriptions. Lock scenes to prevent accidental edits. Copy full scene specs to clipboard. Delete unwanted scenes with automatic renumbering.
+A full editor workbench for scene-by-scene refinement. Each scene card includes dialogue, shot prompts, first-frame and last-frame descriptions, and visual reference placeholders. Lock scenes to prevent accidental edits. Delete and renumber scenes automatically.
 
-Sync scenes one-by-one or in bulk from Smart Create — all AI-generated content (prompts, frame descriptions, reference images) is preserved.
+### Pencil-Sketch Reference Frames
+Six hand-drawn black-and-white pencil-sketch SVGs serve as visual reference placeholders for first and last frames. Each sketch corresponds to a scene type with storyboard frame borders and scene labels. Click to preview full-size and download as SVG.
 
-### Visual Reference Placeholders
-Each scene produces first-frame and last-frame reference cards, ready for replacement with real AI-generated images when connected to an image service.
+### One-Click Demo
+Load a complete demo script with pre-configured parameters, review the generated brief, confirm, and explore the full workflow — from creative idea through storyboard generation to manual refinement.
+
+### Sync to Manual Editor
+Sync individual scenes or all scenes from the smart generator to the manual editor. All AI-generated content — shot prompts, frame descriptions, and reference images — is preserved during sync. After syncing, the page auto-navigates to the manual editor for further refinement.
 
 ### Infrastructure Dashboard
-A read-only settings page that maps out every API route, AI model, database table, and environment variable — designed as a blueprint for connecting real backends.
+A read-only status panel mapping every planned API route, AI model, database table, and environment variable — designed as a blueprint for connecting real backends in the future.
 
 ---
 
@@ -34,12 +57,13 @@ A read-only settings page that maps out every API route, AI model, database tabl
 
 | Layer | Path | Purpose |
 |---|---|---|
-| Domain | `src/domain/` | Types, entities, converters (`Scene`, `StoryboardSession`, `FramePrompt`) |
+| Domain | `src/domain/` | Types and entities (`Scene`, `StoryboardSession`, `FramePrompt`) |
 | Application | `src/application/` | Use-case services (`StoryboardService`, `SessionService`, `AssetService`) |
 | Infrastructure | `src/infrastructure/` | Repository implementations (mock + remote adapters) |
-| Presentation | `src/app/` | Next.js App Router pages (`smart-create`, `manual-create`, `result`, `settings`) |
+| Presentation | `src/app/` | Next.js App Router pages |
 
 **Data flow**: `Pages → getClientServices() → Service interfaces → Mock Repositories`
+
 Zero `fetch()` calls in mock mode — everything runs client-side.
 
 ---
@@ -51,7 +75,7 @@ npm install
 npm run dev        # → http://localhost:3000
 ```
 
-The app defaults to **mock mode** (`NEXT_PUBLIC_DATA_MODE=mock`) — no database or API configuration needed.
+The app defaults to mock mode (`NEXT_PUBLIC_DATA_MODE=mock`) — no database or API configuration needed.
 
 ### Scripts
 
@@ -67,12 +91,7 @@ The app defaults to **mock mode** (`NEXT_PUBLIC_DATA_MODE=mock`) — no database
 
 ## Deployment
 
-GitHub Pages via [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) — every push to `main` triggers a static export build and force-pushes the `out/` directory to the `gh-pages` branch.
-
-Requires:
-- GitHub Pages source set to **Deploy from branch → `gh-pages` / `(root)`**
-- Repository visibility set to **Public**
-- Workflow permissions: `contents: write` + `pages: write`
+GitHub Pages via `.github/workflows/deploy.yml` — every push to `main` triggers a static export and deploys to the `gh-pages` branch.
 
 ---
 
