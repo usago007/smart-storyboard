@@ -49,3 +49,4 @@ next-env.d.ts
 
 # AI agent instructions
 AGENTS.md
+.agents/
