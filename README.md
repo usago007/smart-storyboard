@@ -2,7 +2,7 @@
 
 An AI-powered storyboard generator that turns advertising ideas into professional shot-by-shot breakdowns. Runs entirely in the browser with no backend, no API keys, and no database.
 
-**[Live Demo](https://usago007.github.io/smart-storyboard/)**
+**[Launch App](https://usago007.github.io/smart-storyboard/)**
 
 ---
 
@@ -42,8 +42,8 @@ A full editor workbench for scene-by-scene refinement. Each scene card includes 
 ### Pencil-Sketch Reference Frames
 Six hand-drawn black-and-white pencil-sketch SVGs serve as visual reference placeholders for first and last frames. Each sketch corresponds to a scene type with storyboard frame borders and scene labels. Click to preview full-size and download as SVG.
 
-### One-Click Demo
-Load a complete demo script with pre-configured parameters, review the generated brief, confirm, and explore the full workflow — from creative idea through storyboard generation to manual refinement.
+### One-Click Sample
+Load a complete sample script with pre-configured parameters, review the generated brief, confirm, and explore the full workflow — from creative idea through storyboard generation to manual refinement.
 
 ### Sync to Manual Editor
 Sync individual scenes or all scenes from the smart generator to the manual editor. All AI-generated content — shot prompts, frame descriptions, and reference images — is preserved during sync. After syncing, the page auto-navigates to the manual editor for further refinement.
