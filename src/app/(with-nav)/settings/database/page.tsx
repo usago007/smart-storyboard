@@ -1,1 +1,3 @@
-export { default } from '../data/page';
+import DataSettingsPage from '@/components/settings/DataSettingsPage';
+
+export default DataSettingsPage;
