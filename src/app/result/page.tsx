@@ -86,7 +86,7 @@ function FramePanel({
       {imageUrl && (
         <button
           type="button"
-          onClick={() => router.push(`/image-viewer?image=${encodeURIComponent(imageUrl)}&name=${encodeURIComponent(`${scene.name}-${frameType}.jpg`)}`)}
+          onClick={() => router.push(`/image-viewer/?image=${encodeURIComponent(imageUrl)}&name=${encodeURIComponent(`${scene.name}-${frameType}.jpg`)}`)}
           className="mt-4 block overflow-hidden rounded-[8px] border border-gray-200 hover:opacity-90 transition-opacity"
         >
           <img src={imageUrl} alt="" className="h-44 w-full object-cover" />

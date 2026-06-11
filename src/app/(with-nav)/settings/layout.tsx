@@ -18,10 +18,10 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
     <div className="w-full max-w-[1280px] mx-auto space-y-5">
       <nav className="flex gap-1 border-b border-slate-200 pb-0">
         {tabs.map((tab) => {
-          const href = tab.id ? `/settings/${tab.id}` : '/settings';
+          const href = tab.id ? `/settings/${tab.id}/` : '/settings/';
           const isActive = tab.id
-            ? pathname.startsWith(`/settings/${tab.id}`)
-            : pathname === '/settings';
+            ? pathname.startsWith(`/settings/${tab.id}/`)
+            : pathname === '/settings/';
 
           return (
             <button
