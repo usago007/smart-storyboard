@@ -27,7 +27,7 @@ describe('SettingsLayout', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: '数据' }));
-    expect(pushMock).toHaveBeenCalledWith('/settings/data/');
+    expect(pushMock).toHaveBeenCalledWith('/settings/database/');
   });
 
   it('treats the overview tab as active on the trailing-slash overview path', () => {

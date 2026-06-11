@@ -6,7 +6,7 @@ const tabs = [
   { id: '', label: '概览' },
   { id: 'ai', label: 'AI 服务' },
   { id: 'prompts', label: '提示词' },
-  { id: 'data', label: '数据' },
+  { id: 'database', label: '数据' },
   { id: 'general', label: '通用' },
 ];
 
