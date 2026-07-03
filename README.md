@@ -2,7 +2,7 @@
 
 An AI-powered storyboard generator that turns advertising ideas into professional shot-by-shot breakdowns. Runs entirely in the browser with no backend, no API keys, and no database.
 
-**[Launch App](https://usago007.github.io/smart-storyboard/)**
+**Online demo:** [https://usago007.github.io/smart-storyboard/](https://usago007.github.io/smart-storyboard/)
 
 ---
 
@@ -91,7 +91,7 @@ The app defaults to mock mode (`NEXT_PUBLIC_DATA_MODE=mock`) — no database or 
 
 ## Deployment
 
-GitHub Pages via `.github/workflows/deploy.yml` — every push to `main` triggers a static export and deploys to the `gh-pages` branch.
+Deployed at [https://usago007.github.io/smart-storyboard/](https://usago007.github.io/smart-storyboard/) via `.github/workflows/deploy.yml` — every push to `main` triggers a static export and deploys to the `gh-pages` branch.
 
 ---
 
